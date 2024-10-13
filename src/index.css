@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .glassmorphism {
+    /* From https://css.glass */
+    /* From https://css.glass */
+    background: rgba(255, 255, 255, 0.27);
+    border-radius: 16px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(3.3px);
+    -webkit-backdrop-filter: blur(3.3px);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  .glassmorphism:hover {
+    /* From https://css.glass */
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(1.1px);
+    -webkit-backdrop-filter: blur(1.1px);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  .bg-contrast {
+    background-color: var(--contrast-color);
+  }
+
+  .text-wh {
+    color: var(--main-color);
+  }
+}
+
+@layer utilities {
+  .bg-primary {
+    background-color: var(--main-color);
+  }
+  .bg-secondary {
+    background-color: var(--secondary-color);
+  }
+
+  .btn {
+    background-color: var(--contrast-color);
+    color: var(--main-color);
+    border: none;
+    border-radius: 25px;
+  }
+
+  .text-black {
+    color: var(--head-color);
+  }
+
+  .text-white {
+    color: var(--text-colr);
+  }
+
+  .bg-black {
+    background-color: var(--text-colr);
+  }
+
+  .border-blue-100 {
+    border-color: var(--contrast-color);
+  }
+}
+
+:root {
+  font-family: "Prompt", sans-serif;
+  margin: 0;
+
+  /* Color */
+  --main-color: #ffffff;
+  --secondary-color: #f3f3f3;
+  --contrast-color: #6b5fb4;
+  --text-colr: #35333e;
+  --head-color: #030304;
+}
