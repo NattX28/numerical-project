@@ -1,58 +1,72 @@
-import React, { useEffect } from "react";
-import { useState } from "react";
+import React, { useCallback, useState } from "react";
 
 function GaussSeidelIteration() {
-  const [n, setN] = useState(3);
-  const [numberOfInputN, setNumberOfInputN] = useState("3");
-  const [matA, setMatA] = useState([]);
-  const [matB, setMatB] = useState([]);
+  const [formData, setFormData] = useState({
+    n: 3,
+    matA: Array(3)
+      .fill()
+      .map(() => Array(3).fill("")),
+    matB: Array(3).fill(""),
+    tolerance: "0.000001",
+  });
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
   const [x, setX] = useState([]);
-  const [error, setError] = useState([]);
-  const [tolerance, setTolerance] = useState("0.000001");
-  const [calResult, setCalResult] = useState(null);
 
-  useEffect(() => {
-    setMatA(
-      Array(n)
-        .fill()
-        .map(() => Array(n).fill(""))
-    );
-    setMatB(Array(n).fill(""));
-  }, [n]);
-
-  const handleMatAChange = (rowIndex, colIndex, value) => {
-    const newMatA = [...matA];
-    newMatA[rowIndex][colIndex] = value;
-    setMatA(newMatA);
-  };
-
-  const handleMatBChange = (index, value) => {
-    const newMatB = [...matB];
-    newMatB[index] = value;
-    setMatB(newMatB);
-  };
-
-  const handleNumberOfInputN = (e) => {
-    const val = e.target.value;
-    setNumberOfInputN(val);
-
-    if (val === "") {
-      setN(0);
+  const handleInputChange = useCallback((e) => {
+    const { name, value } = e.target;
+    if (name === "n") {
+      const n = value === "" ? "" : Math.max(1, parseInt(value, 10));
+      setFormData((prev) => ({
+        ...prev,
+        n: n,
+        matA: Array(n)
+          .fill()
+          .map(() => Array(n).fill("")),
+        matB: Array(n).fill(""),
+      }));
+    } else if (name === "tolerance") {
+      setFormData((prev) => ({ ...prev, tolerance: value }));
     } else {
-      const numVal = parseInt(val, 10);
-      if (!isNaN(numVal) && numVal >= 0) {
-        setN(numVal);
-      }
+      const [matrix, row, col] = name.split("-");
+      setFormData((prev) => {
+        const newData = { ...prev };
+        if (matrix === "A") {
+          newData.matA[row][col] = value;
+        } else {
+          newData.matB[row] = value;
+        }
+        return newData;
+      });
     }
-  };
+    setError("");
+  }, []);
 
-  const handleTolerance = (e) => {
-    e.preventDefault();
-    const val = e.target.value;
-    setTolerance(val);
-  };
+  const validateInput = useCallback(() => {
+    const { n, matA, matB, tolerance } = formData;
+    if (n === "" || n < 1) return "Matrix size must be positive integer";
 
-  const calGaussSeidelIteration = () => {
+    if (
+      tolerance === "" ||
+      isNaN(parseFloat(tolerance)) ||
+      parseFloat(tolerance) <= 0
+    )
+      return "Tolerance must be a positive number";
+
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        if (matA[i][j] === "" || isNaN(parseFloat(matA[i][j])))
+          return `Invalid input at matrix A at position A${i}${j}`;
+      }
+      if (matB[i] === "" || isNaN(parseFloat(matB[i])))
+        return `Invalid input at matrix B at position B${i}`;
+    }
+
+    return null;
+  }, [formData]);
+
+  const calGaussSeidelIteration = useCallback(() => {
+    const { n, matA, matB, tolerance } = formData;
     const matrixA = matA.map((row) => row.map((val) => parseFloat(val)));
     const matrixB = matB.map((val) => parseFloat(val));
     let xi = new Array(n).fill(0);
@@ -107,13 +121,23 @@ function GaussSeidelIteration() {
     setX(xiNew);
 
     return result;
-  };
+  }, [formData]);
 
-  const handleCalculate = (e) => {
-    e.preventDefault();
-    const result = calGaussSeidelIteration();
-    setCalResult(result);
-  };
+  const handleSubmit = useCallback(
+    (e) => {
+      e.preventDefault();
+      const validationError = validateInput();
+      if (validationError) {
+        setError(validationError);
+        setResult(null);
+      } else {
+        setError("");
+        const newResult = calGaussSeidelIteration();
+        setResult(newResult);
+      }
+    },
+    [validateInput, calGaussSeidelIteration]
+  );
 
   return (
     <>
@@ -122,7 +146,7 @@ function GaussSeidelIteration() {
           Gauss-Seidel Iteration
         </h2>
         <div className="my-4">
-          <form onSubmit={handleCalculate}>
+          <form onSubmit={handleSubmit}>
             <div className="flex flex-col items-center">
               <div className="flex items-end justify-between px-12 w-4/5">
                 <label className="form-control w-full max-w-xs mr-4">
@@ -132,9 +156,9 @@ function GaussSeidelIteration() {
 
                   <input
                     type="number"
-                    placeholder="0"
-                    value={numberOfInputN}
-                    onChange={(e) => handleNumberOfInputN(e)}
+                    name="n"
+                    value={formData.n}
+                    onChange={handleInputChange}
                     className="input input-bordered w-full max-w-xs"
                   />
                 </label>
@@ -146,11 +170,11 @@ function GaussSeidelIteration() {
                 <div className="label">
                   <span className="label-text">tolerance (ϵ)</span>
                 </div>
-
                 <input
                   type="text"
                   placeholder="0.000001"
-                  value={tolerance}
+                  name="tolerance"
+                  value={formData.tolerance}
                   onChange={(e) => handleTolerance(e)}
                   className="input input-bordered w-full max-w-xs"
                 />
@@ -161,20 +185,19 @@ function GaussSeidelIteration() {
                   <div
                     className={`mt-6 grid gap-3`}
                     style={{
-                      gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`,
+                      gridTemplateColumns: `repeat(${formData.n},minmax(0,1fr)`,
                     }}
                   >
-                    {matA.map((row, i) =>
+                    {formData.matA.map((row, i) =>
                       row.map((_, j) => (
                         <input
                           key={`A-${i}-${j}`}
                           type="text"
-                          placeholder={`a${i + 1}${j + 1}`}
-                          value={matA[i][j]}
-                          onChange={(e) =>
-                            handleMatAChange(i, j, e.target.value)
-                          }
+                          name={`A-${i}-${j}`}
+                          value={formData.matA[i][j]}
+                          onChange={handleInputChange}
                           className="input input-bordered w-16 h-16 text-center"
+                          placeholder={`a${i + 1}${j + 1}`}
                         />
                       ))
                     )}
@@ -183,7 +206,7 @@ function GaussSeidelIteration() {
                 <div className="mx-5">
                   <h3 className="text-2xl text-center">{"{x}"}</h3>
                   <div className="mt-6 grid grid-cols-1 gap-3">
-                    {Array(n)
+                    {Array(formData.n)
                       .fill()
                       .map((_, i) => (
                         <input
@@ -201,13 +224,14 @@ function GaussSeidelIteration() {
                 <div className="mx-5">
                   <h3 className="text-2xl text-center">{"{B}"}</h3>
                   <div className="mt-6 grid grid-cols-1 gap-3">
-                    {matB.map((_, i) => (
+                    {formData.matB.map((_, i) => (
                       <input
                         key={`B-${i}`}
                         type="text"
+                        name={`B-${i}`}
                         placeholder={`b${i + 1}`}
-                        value={matB[i]}
-                        onChange={(e) => handleMatBChange(i, e.target.value)}
+                        value={formData.matB[i]}
+                        onChange={handleInputChange}
                         className="input input-bordered w-16 h-16 text-center"
                       />
                     ))}
@@ -216,15 +240,17 @@ function GaussSeidelIteration() {
               </div>
             </div>
           </form>
+          {error && (
+            <p className="text-red-600 text-center mt-2 w-full">{error}</p>
+          )}
         </div>
       </div>
+
       {/* Display result table */}
-      {calResult && (
+      {result && (
         <div className="my-8 w-4/5">
-          {calResult ? (
-            <>
-              <div className="overflow-x-auto bg-white rounded-3xl">
-                {/* <div className="flex justify-around w-full">
+          <div className="overflow-x-auto bg-white rounded-3xl">
+            {/* <div className="flex justify-around w-full">
                   <h4 className="text-center my-6 text-xl">
                     Root found : x = {result.root.toFixed(6)}
                   </h4>
@@ -235,37 +261,31 @@ function GaussSeidelIteration() {
                     error : {result.error}
                   </h4>
                 </div> */}
-                <table className="table table-zebra">
-                  <thead>
-                    <tr>
-                      <th>Iteration</th>
-                      {x.map((_, i) => (
-                        <th key={i}>
-                          x<sub>{i + 1}</sub>
-                        </th>
-                      ))}
-                      <th>error</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {calResult.data.map((row, index) => (
-                      <tr key={index}>
-                        <td>{row.iteration}</td>
-                        {row.x.map((val, i) => (
-                          <td key={`x${i + 1}-${index}`}>{val}</td>
-                        ))}
-                        <td>{row.error.toFixed(6)}</td>
-                      </tr>
+            <table className="table table-zebra">
+              <thead>
+                <tr>
+                  <th>Iteration</th>
+                  {x.map((_, i) => (
+                    <th key={i}>
+                      x<sub>{i + 1}</sub>
+                    </th>
+                  ))}
+                  <th>error</th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.data.map((row, index) => (
+                  <tr key={index}>
+                    <td>{row.iteration}</td>
+                    {row.x.map((val, i) => (
+                      <td key={`x${i + 1}-${index}`}>{val}</td>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          ) : (
-            <p className="text-red-500 text-center">
-              No root found in the given interval.
-            </p>
-          )}
+                    <td>{row.error.toFixed(6)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </>

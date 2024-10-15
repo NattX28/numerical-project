@@ -1,50 +1,63 @@
-import React, { useEffect } from "react";
-import { useState } from "react";
-import { det, matrix } from "mathjs";
+import React, { useCallback, useState } from "react";
+import { det } from "mathjs";
 
 function CramerRules() {
-  const [n, setN] = useState(3);
-  const [numberOfInputN, setNumberOfInputN] = useState("3");
-  const [matA, setMatA] = useState([]);
-  const [matB, setMatB] = useState([]);
-  const [x, setX] = useState([]);
+  const [formData, setFormData] = useState({
+    n: 3,
+    matA: Array(3)
+      .fill()
+      .map(() => Array(3).fill("")),
+    matB: Array(3).fill(""),
+  });
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    setMatA(
-      Array(n)
-        .fill()
-        .map(() => Array(n).fill(""))
-    );
-    setMatB(Array(n).fill(""));
-  }, [n]);
-
-  const handleMatAChange = (rowIndex, colIndex, value) => {
-    const newMatA = [...matA];
-    newMatA[rowIndex][colIndex] = value;
-    setMatA(newMatA);
-  };
-
-  const handleMatBChange = (index, value) => {
-    const newMatB = [...matB];
-    newMatB[index] = value;
-    setMatB(newMatB);
-  };
-
-  const handleNumberOfInputN = (e) => {
-    const val = e.target.value;
-    setNumberOfInputN(val);
-
-    if (val === "") {
-      setN(0);
+  const handleInputChange = useCallback((e) => {
+    const { name, value } = e.target;
+    if (name === "n") {
+      const n = value === "" ? "" : Math.max(1, parseInt(value, 10));
+      setFormData((prev) => ({
+        n,
+        matA: Array(n)
+          .fill()
+          .map(() => Array(n).fill("")),
+        matB: Array(n).fill(""),
+      }));
     } else {
-      const numVal = parseInt(val, 10);
-      if (!isNaN(numVal) && numVal >= 0) {
-        setN(numVal);
+      const [matrix, row, col] = name.split("-");
+      setFormData((prev) => {
+        const newData = { ...prev };
+        if (matrix === "A") {
+          newData.matA[row][col] = value;
+        } else {
+          newData.matB[row] = value;
+        }
+        return newData;
+      });
+    }
+    setError(""); // Clear error when input change
+  }, []);
+
+  const validateInput = useCallback(() => {
+    const { n, matA, matB } = formData;
+    if (n === "" || n < 1) return "Matrix size must be positive integer.";
+
+    for (let i = 0; i < n; i++) {
+      for (let j = n; j < n; j++) {
+        if (matA[i][j] === "" || isNaN(parseFloat(matA[i][j]))) {
+          return `Invalid input in matrix A at position (${i + 1},${j + 1}).`;
+        }
+      }
+      if (matB[i] === "" || isNaN(parseFloat(matB))) {
+        return `Invalid input in matrix B at position (${i + 1}).`;
       }
     }
-  };
 
-  const calCramersRule = () => {
+    return null;
+  }, [formData]);
+
+  const calCramersRule = useCallback(() => {
+    const { n, matA, matB } = formData;
     // แปลงค่าเป็นตัวเลขก่อนการคำนวณ
     const matrixA = matA.map((row) => row.map((val) => parseFloat(val) || 0));
     const matrixB = matB.map((val) => parseFloat(val) || 0);
@@ -52,55 +65,58 @@ function CramerRules() {
     // คำนวณ detA
     const detA = det(matrixA);
     if (detA === 0) {
-      alert("ดีเทอร์มิแนนต์ของเมทริกซ์ A เป็น 0 ไม่สามารถคำนวณได้");
-      return { X: Array(n).fill(0) };
+      setError("Determinat of matrix A is 0. Cannot calculate.");
+      return;
     }
 
     // คำนวณดีเทอร์มิแนนต์ของ Ai
-    const detAi = [];
+    const solutions = [];
     for (let i = 0; i < n; i++) {
       const ai2D = matrixA.map((row) => [...row]); // คัดลอกเมทริกซ์ A
       for (let j = 0; j < n; j++) {
         ai2D[j][i] = matrixB[j]; // แทนที่คอลัมน์ i ด้วยเมทริกซ์ B
       }
-      detAi.push(det(ai2D)); // คำนวณ det(Ai)
+      solutions.push(det(ai2D) / detA); // คำนวณ det(Ai)
     }
 
-    // คำนวณคำตอบ X
-    const solutions = detAi.map((detAiVal) => detAiVal / detA);
+    return solutions;
+  }, [formData]);
 
-    return {
-      matrixA: matA,
-      matrixB: matB,
-      X: solutions,
-    };
-  };
-
-  const handleCalculate = (e) => {
-    e.preventDefault();
-    const result = calCramersRule();
-    setX([...result.X]);
-  };
+  const handleSubmit = useCallback(
+    (e) => {
+      e.preventDefault();
+      const validationError = validateInput();
+      if (validationError) {
+        setError(validationError);
+        setResult(null);
+      } else {
+        setError("");
+        const newResult = calCramersRule();
+        setResult(newResult);
+      }
+    },
+    [validateInput, calCramersRule]
+  );
 
   return (
     <>
       <div className="mb-2 flex flex-col items-center justify-center rounded-3xl py-4 px-4 bg-white w-3/5 my-4 max-w-full">
         <h2 className="text-center text-2xl font-bold mt-2">Cramer's Rule</h2>
         <div className="my-4">
-          <form onSubmit={handleCalculate}>
+          <form onSubmit={handleSubmit}>
             <div className="flex flex-col items-center">
               <div className="flex items-end justify-between px-12 w-4/5">
                 <label className="form-control w-full max-w-xs mr-4">
                   <div className="label">
                     <span className="label-text">Matrix size ( N x N )</span>
                   </div>
-
                   <input
                     type="number"
-                    placeholder="0"
-                    value={numberOfInputN}
-                    onChange={(e) => handleNumberOfInputN(e)}
+                    name="n"
+                    value={formData.n}
+                    onChange={handleInputChange}
                     className="input input-bordered w-full max-w-xs"
+                    min="1"
                   />
                 </label>
                 <button className="btn glass" type="submit">
@@ -113,19 +129,18 @@ function CramerRules() {
                   <div
                     className={`mt-6 grid gap-3`}
                     style={{
-                      gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`,
+                      gridTemplateColumns: `repeat(${formData.n}, minmax(0, 1fr))`,
                     }}
                   >
-                    {matA.map((row, i) =>
+                    {formData.matA.map((row, i) =>
                       row.map((_, j) => (
                         <input
                           key={`A-${i}-${j}`}
                           type="text"
+                          name={`A-${i}-${j}`}
                           placeholder={`a${i + 1}${j + 1}`}
-                          value={matA[i][j]}
-                          onChange={(e) =>
-                            handleMatAChange(i, j, e.target.value)
-                          }
+                          value={formData.matA[i][j]}
+                          onChange={handleInputChange}
                           className="input input-bordered w-16 h-16 text-center"
                         />
                       ))
@@ -135,7 +150,7 @@ function CramerRules() {
                 <div className="mx-5">
                   <h3 className="text-2xl text-center">{"{x}"}</h3>
                   <div className="mt-6 grid grid-cols-1 gap-3">
-                    {Array(n)
+                    {Array(formData.n)
                       .fill()
                       .map((_, i) => (
                         <input
@@ -153,13 +168,14 @@ function CramerRules() {
                 <div className="mx-5">
                   <h3 className="text-2xl text-center">{"{B}"}</h3>
                   <div className="mt-6 grid grid-cols-1 gap-3">
-                    {matB.map((_, i) => (
+                    {formData.matB.map((_, i) => (
                       <input
                         key={`B-${i}`}
+                        name={`B-${i}`}
                         type="text"
                         placeholder={`b${i + 1}`}
-                        value={matB[i]}
-                        onChange={(e) => handleMatBChange(i, e.target.value)}
+                        value={formData.matB[i]}
+                        onChange={handleInputChange}
                         className="input input-bordered w-16 h-16 text-center"
                       />
                     ))}
@@ -170,16 +186,17 @@ function CramerRules() {
           </form>
         </div>
       </div>
-      {x.length > 0 ? (
+
+      {error && <p className="text-red-600 text-center mt-2 w-full">{error}</p>}
+
+      {result && (
         <div className="my-2 flex items-center justify-center rounded-3xl py-4 px-6 bg-white w-5/5 max-w-full">
           <div className="flex flex-col items-center justify-center w-full">
-            {x.map((result, index) => (
+            {result.map((result, index) => (
               <p key={index}>{`x${index + 1} = ${result}`}</p>
             ))}
           </div>
         </div>
-      ) : (
-        <></>
       )}
     </>
   );

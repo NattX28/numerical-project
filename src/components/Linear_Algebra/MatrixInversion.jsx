@@ -1,50 +1,59 @@
-import React, { useEffect } from "react";
-import { useState } from "react";
-
+import React, { useState, useCallback } from "react";
 function MatrixInversion() {
-  const [n, setN] = useState(3);
-  const [numberOfInputN, setNumberOfInputN] = useState("3");
-  const [matA, setMatA] = useState([]);
-  const [matB, setMatB] = useState([]);
-  const [x, setX] = useState([]);
-  const [invA, setInvA] = useState([]);
+  const [formData, setFormData] = useState({
+    n: 3,
+    matA: Array(3)
+      .fill()
+      .map(() => Array(3).fill("")),
+    matB: Array(3).fill(""),
+  });
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    setMatA(
-      Array(n)
-        .fill()
-        .map(() => Array(n).fill(""))
-    );
-    setMatB(Array(n).fill(""));
-  }, [n]);
-
-  const handleMatAChange = (rowIndex, colIndex, value) => {
-    const newMatA = [...matA];
-    newMatA[rowIndex][colIndex] = value;
-    setMatA(newMatA);
-  };
-
-  const handleMatBChange = (index, value) => {
-    const newMatB = [...matB];
-    newMatB[index] = value;
-    setMatB(newMatB);
-  };
-
-  const handleNumberOfInputN = (e) => {
-    const val = e.target.value;
-    setNumberOfInputN(val);
-
-    if (val === "") {
-      setN(0);
+  const handleInputChange = useCallback((e) => {
+    const { name, value } = e.target;
+    if (name === "n") {
+      const n = value === "" ? "" : Math.max(1, parseInt(value, 10));
+      setFormData((prev) => ({
+        n: n,
+        matA: Array(n)
+          .fill()
+          .map(() => Array(n).fill("")),
+        matB: Array(n).fill(""),
+      }));
     } else {
-      const numVal = parseInt(val, 10);
-      if (!isNaN(numVal) && numVal >= 0) {
-        setN(numVal);
-      }
+      const [matrix, row, col] = name.split("-");
+      setFormData((prev) => {
+        const newData = { ...prev };
+        if (matrix === "A") {
+          newData.matA[row][col] = value;
+        } else {
+          newData.matB[row] = value;
+        }
+        return newData;
+      });
     }
-  };
+    setError("");
+  }, []);
 
-  const calMatrixInversion = () => {
+  const validateInput = useCallback(() => {
+    const { n, matA, matB } = formData;
+    if (n === "" || n < 1) return "Matrix size must be positive integer";
+
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        if (matA[i][j] === "" || isNaN(parseFloat(matA[i][j])))
+          return `Invalid input at matrix A at position A${i}${j}`;
+      }
+      if (matB[i] === "" || isNaN(parseFloat(matB[i])))
+        return `Invalid input at matrix B at position B${i}`;
+    }
+
+    return null;
+  }, [formData]);
+
+  const calMatrixInversion = useCallback(() => {
+    const { n, matA, matB } = formData;
     const matrix = matA.map((row) => row.map((val) => parseFloat(val, 10)));
     const matrixB = matB.map((val) => parseFloat(val));
 
@@ -98,16 +107,23 @@ function MatrixInversion() {
       inverseMatrix: inverseMat,
       X: xi,
     };
-  };
+  }, [formData]);
 
-  const handleCalculate = (e) => {
-    e.preventDefault();
-    const result = calMatrixInversion();
-    if (result) {
-      setInvA(result.inverseMatrix);
-      setX([...result.X]);
-    }
-  };
+  const handleSubmit = useCallback(
+    (e) => {
+      e.preventDefault();
+      const validationError = validateInput();
+      if (validationError) {
+        setError(validationError);
+        setResult(null);
+      } else {
+        setError("");
+        const newResult = calMatrixInversion();
+        setResult(newResult);
+      }
+    },
+    [validateInput, calMatrixInversion]
+  );
 
   return (
     <>
@@ -116,7 +132,7 @@ function MatrixInversion() {
           Matrix Inversion
         </h2>
         <div className="my-4">
-          <form onSubmit={handleCalculate}>
+          <form onSubmit={handleSubmit}>
             <div className="flex flex-col items-center">
               <div className="flex items-end justify-between px-12 w-4/5">
                 <label className="form-control w-full max-w-xs mr-4">
@@ -126,9 +142,9 @@ function MatrixInversion() {
 
                   <input
                     type="number"
-                    placeholder="0"
-                    value={numberOfInputN}
-                    onChange={(e) => handleNumberOfInputN(e)}
+                    name="n"
+                    value={formData.n}
+                    onChange={handleInputChange}
                     className="input input-bordered w-full max-w-xs"
                   />
                 </label>
@@ -142,30 +158,28 @@ function MatrixInversion() {
                   <div
                     className={`mt-6 grid gap-3`}
                     style={{
-                      gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`,
+                      gridTemplateColumns: `repeat(${formData.n},minmax(0,1fr)`,
                     }}
                   >
-                    {matA.map((row, i) =>
+                    {formData.matA.map((row, i) =>
                       row.map((_, j) => (
                         <input
                           key={`A-${i}-${j}`}
                           type="text"
-                          placeholder={`a${i + 1}${j + 1}`}
-                          value={matA[i][j]}
-                          onChange={(e) =>
-                            handleMatAChange(i, j, e.target.value)
-                          }
+                          name={`A-${i}-${j}`}
+                          value={formData.matA[i][j]}
+                          onChange={handleInputChange}
                           className="input input-bordered w-16 h-16 text-center"
+                          placeholder={`a${i + 1}${j + 1}`}
                         />
                       ))
                     )}
                   </div>
                 </div>
-
                 <div className="mx-5">
                   <h3 className="text-2xl text-center">{"{x}"}</h3>
                   <div className="mt-6 grid grid-cols-1 gap-3">
-                    {Array(n)
+                    {Array(formData.n)
                       .fill()
                       .map((_, i) => (
                         <input
@@ -183,13 +197,14 @@ function MatrixInversion() {
                 <div className="mx-5">
                   <h3 className="text-2xl text-center">{"{B}"}</h3>
                   <div className="mt-6 grid grid-cols-1 gap-3">
-                    {matB.map((_, i) => (
+                    {formData.matB.map((_, i) => (
                       <input
                         key={`B-${i}`}
                         type="text"
+                        name={`B-${i}`}
                         placeholder={`b${i + 1}`}
-                        value={matB[i]}
-                        onChange={(e) => handleMatBChange(i, e.target.value)}
+                        value={formData.matB[i]}
+                        onChange={handleInputChange}
                         className="input input-bordered w-16 h-16 text-center"
                       />
                     ))}
@@ -198,19 +213,19 @@ function MatrixInversion() {
               </div>
             </div>
           </form>
+          {error && (
+            <p className="text-red-600 text-center mt-2 w-full">{error}</p>
+          )}
         </div>
       </div>
-
-      {x.length > 0 ? (
+      {result && (
         <div className="my-2 flex items-center justify-center rounded-3xl py-4 px-6 bg-white w-5/5 max-w-full">
           <div className="flex flex-col items-center justify-center w-full">
-            {x.map((result, index) => (
+            {result.X.map((result, index) => (
               <p key={index}>{`x${index + 1} = ${result}`}</p>
             ))}
           </div>
         </div>
-      ) : (
-        <></>
       )}
     </>
   );
