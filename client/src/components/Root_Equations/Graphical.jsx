@@ -2,11 +2,13 @@ import React, { useCallback, useState, useEffect } from "react";
 import { evaluate } from "mathjs";
 import Plot from "react-plotly.js";
 
-function FalsePosition() {
+function Graphical() {
+  // initial
+
   const [formData, setFormData] = useState({
     equation: "",
-    xl: "",
-    xr: "",
+    xStart: "",
+    xStop: "",
     tolerance: "",
   });
   const [result, setResult] = useState(null);
@@ -14,24 +16,24 @@ function FalsePosition() {
   const [plotData, setPlotData] = useState(null);
 
   const handleInputChange = useCallback((e) => {
-    e.preventDefault();
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
   }, []);
 
   const validateInput = useCallback(() => {
-    const { equation, xl, xr, tolerance } = formData;
-    const xlNum = parseFloat(xl);
-    const xrNum = parseFloat(xr);
+    const { equation, xStart, xStop, tolerance } = formData;
+    const xStartNum = parseFloat(xStart);
+    const xStopNum = parseFloat(xStop);
     const toleranceNum = parseFloat(tolerance);
 
-    if (!equation || xl === "" || xr === "" || tolerance === "")
+    if (equation === "" || xStart === "" || xStop === "" || tolerance === "")
       return "Please fill in all fields.";
 
-    if (isNaN(xlNum) || isNaN(xrNum) || isNaN(toleranceNum))
-      return "Xl, Xr and tolerance(error) must be number.";
+    if (isNaN(xStartNum) || isNaN(xStopNum) || isNaN(toleranceNum))
+      return "xStart, xStop and tolerance(error) must be number.";
 
-    if (xlNum >= xrNum) return "Xl must be less than Xr.";
+    if (xStartNum >= xStopNum)
+      return "x start value must be less than x stop value.";
 
     if (toleranceNum <= 0) return "error must be greater than 0.";
 
@@ -44,57 +46,79 @@ function FalsePosition() {
     return null;
   }, [formData]);
 
-  const calFalsePosition = useCallback(() => {
+  const calGraphical = useCallback(() => {
     const {
       equation,
-      xl: xlString,
-      xr: xrString,
-      tolerance: toleranceString,
+      xStart: xStartNum,
+      xStop: xStopNum,
+      tolerance,
     } = formData;
-    let xl = parseFloat(xlString);
-    let xr = parseFloat(xrString);
-    const tolerance = parseFloat(toleranceString);
+    let xStart = parseFloat(xStartNum);
+    let xStop = parseFloat(xStopNum);
 
-    const checkError = (xOld, xNew) => Math.abs((xNew - xOld) / xNew);
-    const f = (x) => evaluate(equation, { x: x });
-
-    let xiOld, xiNew;
-    let ea = 1;
-    const MAX_ITER = 50;
-    let iter = 1;
     const data = [];
-    const errors = [];
-    const iterations = [];
+    const X = [];
+    const Y = [];
+    const MAX_ITERATIONS = 1000; // ป้องกันการวนลูปไม่รู้จบ
+    const refinedStep = 0.0001;
+    let iter = 0;
 
-    do {
-      xiNew = (xl * f(xr) - xr * f(xl)) / (f(xr) - f(xl));
-      if (f(xiNew) * f(xr) < 0) {
-        xl = xiNew;
-      } else {
-        xr = xiNew;
+    for (let i = xStart; i < xStop && iter < MAX_ITERATIONS; i++) {
+      iter += 1;
+      const y1 = evaluate(equation, { x: i });
+      const y2 = evaluate(equation, { x: i + 1 });
+      const xi = y1 * y2;
+
+      data.push({
+        iteration: iter,
+        X: i,
+        fx: y1,
+      });
+      X.push(i);
+      Y.push(y1);
+
+      if (Math.abs(y1) <= tolerance) {
+        // พบคำตอบที่ใกล้เคียงศูนย์
+        setPlotData({ Y, X });
+        return {
+          data: data,
+          root: i,
+          iteration: iter,
+          tolerance: tolerance,
+        };
       }
+      // เปลี่ยนช่วงจาก + -> - or - -> +
+      if (xi <= 0) {
+        for (let j = i; j < i + 1; j += refinedStep) {
+          iter += 1;
+          const yj = evaluate(equation, { x: j });
+          const yjNext = evaluate(equation, { x: j + refinedStep });
+          const xj = yj * yjNext;
 
-      if (iter > 1) {
-        ea = checkError(xiOld, xiNew);
-        console.log(ea);
+          data.push({ iteration: iter, X: j, fx: yj });
+          X.push(j);
+          Y.push(yj);
+
+          if (Math.abs(yj) <= tolerance || xj <= 0) {
+            setPlotData({ Y, X });
+            return {
+              data: data,
+              root: j,
+              iteration: iter,
+              tolerance: tolerance,
+            };
+          }
+        }
       }
+    }
 
-      data.push({ iteration: iter, Xl: xl, Xi: xiNew, Xr: xr, error: ea });
-      errors.push(ea);
-      iterations.push(iter);
-
-      xiOld = xiNew;
-      iter++;
-    } while (iter <= MAX_ITER && ea > tolerance);
-
-    setPlotData({ iterations, errors });
+    // อัปเดตสถานะหลังจากลูปเสร็จ
+    setPlotData({ Y, X });
     return {
-      root: xiNew,
-      iteration: data.length,
+      root: null,
       data: data,
-      xl: xl,
-      xr: xr,
-      error: ea,
+      iteration: iter,
+      tolerance: tolerance,
     };
   }, [formData]);
 
@@ -108,11 +132,25 @@ function FalsePosition() {
         setPlotData(null);
       } else {
         setError("");
-        const newResult = calFalsePosition();
+        const newResult = calGraphical();
+
+        fetch(
+          `${import.meta.env.VITE_server_ip}:${
+            import.meta.env.VITE_server_port
+          }/save/rootequation/all`,
+          {
+            method: "POST",
+            body: JSON.stringify({ equation: formData.equation }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
         setResult(newResult);
       }
     },
-    [validateInput, calFalsePosition]
+    [validateInput, calGraphical]
   );
 
   useEffect(() => {
@@ -130,7 +168,7 @@ function FalsePosition() {
       </div>
       {/* input form */}
       <div className=" mb-2 flex flex-col items-center justify-center rounded-3xl py-4 px-4 bg-white w-3/5">
-        <h2 className="text-white text-2xl font-bold">False-Position Method</h2>
+        <h2 className="text-white text-2xl font-bold">Graphical Method</h2>
 
         <div className="mt-4 w-1/3 ">
           <form
@@ -154,32 +192,32 @@ function FalsePosition() {
               <div className="flex">
                 <label className="form-control w-1/2 max-w-xs ">
                   <div className="label">
-                    <span className="label-text">xl</span>
+                    <span className="label-text">X start</span>
                   </div>
                   <input
                     type="text"
                     placeholder="0"
                     className="input input-bordered w-4/5 max-w-xs text-sm"
-                    id="xl"
+                    id="xStart"
                     onChange={handleInputChange}
                   />
                 </label>
                 <label className="form-control w-1/2 max-w-xs">
                   <div className="label">
-                    <span className="label-text">xr</span>
+                    <span className="label-text">X end</span>
                   </div>
                   <input
                     type="text"
                     placeholder="4"
                     className="input input-bordered w-4/5 max-w-xs text-sm"
-                    id="xr"
+                    id="xStop"
                     onChange={handleInputChange}
                   />
                 </label>
               </div>
               <label className="form-control w-full max-w-xs">
                 <div className="label">
-                  <span className="label-text">tolerance (ϵ)</span>
+                  <span className="label-text">tolerance</span>
                 </div>
                 <input
                   type="text"
@@ -202,24 +240,26 @@ function FalsePosition() {
         </div>
       </div>
 
+      {/* Graph */}
       {plotData && (
         <div className="my-8 w-4/5 flex justify-center">
           <Plot
             data={[
               {
-                x: plotData.iterations,
-                y: plotData.errors,
+                x: plotData.X,
+                y: plotData.Y,
+                type: "scatter",
                 mode: "lines+markers",
                 marker: { color: "#6C0BA9" },
-                name: "Error",
+                name: "value",
               },
             ]}
             layout={{
               width: 1080,
               height: 480,
-              title: "Error vs. Iteration",
-              xaxis: { title: "Iteration" },
-              yaxis: { title: "Error", type: "log" },
+              title: "x vs f(x)",
+              xaxis: { title: "x" },
+              yaxis: { title: "f(x)", type: "number" },
             }}
           ></Plot>
         </div>
@@ -228,38 +268,25 @@ function FalsePosition() {
       {/* Display result table */}
       {result && (
         <div className="my-8 w-4/5">
-          <div className="overflow-x-auto bg-white rounded-3xl">
-            <div className="flex justify-around w-full">
-              <h4 className="text-center my-6 text-xl">
-                Root found : x = {result.root.toFixed(6)}
-              </h4>
-              <h4 className="text-center my-6 text-xl">
-                Iterations : {result.iteration}
-              </h4>
-              <h4 className="text-center my-6 text-xl">
-                error : {result.error.toFixed(6)}
-              </h4>
-            </div>
+          <div className="overflow-x-auto bg-white rounded-3xl ">
+            <h4 className="text-center my-6 text-xl">
+              Root found : x = {result.root.toFixed(6)}, Iteration :
+              {result.iteration}
+            </h4>
             <table className="table table-zebra">
               <thead>
                 <tr>
                   <th>Iteration</th>
-                  <th>Xl</th>
-                  <th>Xr</th>
-                  <th>
-                    X<sub>i</sub>
-                  </th>
-                  <th>error</th>
+                  <th>X</th>
+                  <th>Y</th>
                 </tr>
               </thead>
               <tbody>
                 {result.data.map((row, index) => (
                   <tr key={index}>
                     <td>{row.iteration}</td>
-                    <td>{row.Xl.toFixed(6)}</td>
-                    <td>{row.Xr.toFixed(6)}</td>
-                    <td>{row.Xi.toFixed(6)}</td>
-                    <td>{row.error.toFixed(6)}</td>
+                    <td>{row.X.toFixed(6)}</td>
+                    <td>{row.fx.toFixed(6)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -271,4 +298,4 @@ function FalsePosition() {
   );
 }
 
-export default FalsePosition;
+export default Graphical;

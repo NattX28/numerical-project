@@ -23,8 +23,12 @@ import GaussSeidelIteration from "./components/Linear_Algebra/GaussSeidelIterati
 // Interpolation
 import NewtonDividedDifference from "./components/Interpolation/NewtonDividedDifference";
 import LagrangeInterpolation from "./components/Interpolation/LagrangeInterpolation";
+import SplineInterpolation from "./components/Interpolation/SplineInterpolation";
 
-function Hero() {
+// Extrapolation
+import SimpleRegression from "./components/Extrapolation/SimpleRegression";
+
+function Hero({ setShowCal }) {
   const [typeProb, setTypeProb] = useState("");
   const [sol, setSol] = useState([]);
   const [selectedMethod, setSelectedMethod] = useState("");
@@ -85,38 +89,63 @@ function Hero() {
   const renderMethodComponent = function () {
     switch (selectedMethod) {
       case "Graphical Methods":
+        setShowCal(false);
         return <Graphical />;
       case "Bisection Methods":
+        setShowCal(false);
         return <Bisection />;
       case "False-Position Methods":
+        setShowCal(false);
         return <FalsePosition />;
       case "One-Point Iteration Methods":
+        setShowCal(false);
         return <OnePointIteration />;
       case "Newton-Raphson Methods":
+        setShowCal(false);
         return <NewtonRaphson />;
       case "Secant Methods":
+        setShowCal(false);
         return <Secant />;
       case "Cramer's Rule":
+        setShowCal(false);
         return <CramerRules />;
       case "Gauss Elimination":
+        setShowCal(false);
         return <GaussElimination />;
       case "Gauss-Jordan Elimination":
+        setShowCal(false);
         return <GaussJordanElimination />;
       case "Matrix Inversion":
+        setShowCal(false);
         return <MatrixInversion />;
       case "LU Decomposition Methods":
+        setShowCal(false);
         return <LUDecomposition />;
       case "Cholesky Decomposition Methods":
+        setShowCal(false);
         return <Cholesky />;
       case "Jacobi Iteration Methods":
+        setShowCal(false);
         return <JacobiIteration />;
       case "Gauss-Seidel Methods":
+        setShowCal(false);
         return <GaussSeidelIteration />;
       case "Newton divided-differences":
+        setShowCal(false);
         return <NewtonDividedDifference />;
       case "Lagrange Interpolation":
+        setShowCal(false);
+
         return <LagrangeInterpolation />;
+      case "Spline Interpolation":
+        setShowCal(false);
+        return <SplineInterpolation />;
+      case "Simple Regression":
+        setShowCal(false);
+        return <SimpleRegression />;
+
       default:
+        setShowCal(true);
         return null;
     }
   };

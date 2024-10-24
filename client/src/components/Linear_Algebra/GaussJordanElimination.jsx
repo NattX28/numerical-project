@@ -1,5 +1,7 @@
 import React, { useState, useCallback } from "react";
-function MatrixInversion() {
+import { BlockMath } from "react-katex";
+
+function GaussJordanElimination() {
   const [formData, setFormData] = useState({
     n: 3,
     matA: Array(3)
@@ -52,59 +54,56 @@ function MatrixInversion() {
     return null;
   }, [formData]);
 
-  const calMatrixInversion = useCallback(() => {
+  const calGaussJordan = useCallback(() => {
     const { n, matA, matB } = formData;
-    const matrix = matA.map((row) => row.map((val) => parseFloat(val, 10)));
-    const matrixB = matB.map((val) => parseFloat(val));
+    const matrixA = matA.map((row) => row.map((val) => parseFloat(val, 10)));
+    const matrixB = matB.map((val) => parseFloat(val, 10));
+    let ratio;
 
-    // Create the argumented matrix [A | I]
-    const augmentedMatrix = matrix.map((row, i) => [
-      ...row,
-      ...Array(n)
-        .fill(0)
-        .map((_, j) => (i === j ? 1 : 0)),
-    ]);
-
-    // Perform Gauss-Jordan elimination
+    // Forward Elimination
     for (let i = 0; i < n; i++) {
-      // Make the diagnal element 1
-      const diagnalElement = augmentedMatrix[i][i];
-      if (diagnalElement === 0) {
-        alert("Errror: Matrix is not invertible");
-        return null;
+      if (matrixA[i][i] === 0) {
+        setError("Error : Divide by 0");
+        break;
       }
 
-      for (let j = 0; j < n * 2; j++) {
-        augmentedMatrix[i][j] /= diagnalElement;
-      }
-
-      // Make other elements in the column 0
-      for (let k = 0; k < n; k++) {
-        if (k !== i) {
-          const factor = augmentedMatrix[k][i];
-          for (let j = 0; j < n * 2; j++) {
-            augmentedMatrix[k][j] -= factor * augmentedMatrix[i][j];
-          }
+      for (let j = i + 1; j < n; j++) {
+        ratio = matrixA[j][i] / matrixA[i][i];
+        for (let k = i; k < n; k++) {
+          matrixA[j][k] -= ratio * matrixA[i][k];
         }
+        matrixB[j] -= ratio * matrixB[i];
       }
     }
 
-    // Extract the inverse matrix
-    const inverseMat = augmentedMatrix.map((row) => row.slice(n));
+    // Backward Elimination
+    for (let i = n - 1; i >= 0; i--) {
+      for (let j = i - 1; j >= 0; j--) {
+        ratio = matrixA[j][i] / matrixA[i][i];
+        for (let k = i; k < n; k++) {
+          matrixA[j][k] -= ratio * matrixA[i][k];
+        }
+        matrixB[j] -= ratio * matrixB[i];
+      }
+    }
 
-    const xi = Array(n).fill(0);
+    // Make the diagonal 1
     for (let i = 0; i < n; i++) {
-      let sum = 0;
-      for (let j = 0; j < n; j++) {
-        sum += inverseMat[i][j] * matrixB[j];
+      const diagVal = matrixA[i][i];
+      if (diagVal !== 0) {
+        matrixB[i] /= diagVal;
+        matrixA[i][i] /= diagVal;
+      } else {
+        alert("Error: Division by zero in diagonal");
+        return;
       }
-      xi[i] = sum;
     }
+
+    const xi = [...matrixB];
 
     return {
-      matrixA: matA,
-      matrixB: matB,
-      inverseMatrix: inverseMat,
+      matrixA: matrixA,
+      matrixB: matrixB,
       X: xi,
     };
   }, [formData]);
@@ -118,18 +117,66 @@ function MatrixInversion() {
         setResult(null);
       } else {
         setError("");
-        const newResult = calMatrixInversion();
+        const newResult = calGaussJordan();
+
+        fetch(
+          `${import.meta.env.VITE_server_ip}:${
+            import.meta.env.VITE_server_port
+          }/save/linearalgebra/all`,
+          {
+            method: "POST",
+            body: JSON.stringify({
+              matA: formData.matA,
+              matB: formData.matB,
+            }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
         setResult(newResult);
       }
     },
-    [validateInput, calMatrixInversion]
+    [validateInput, calGaussJordan]
   );
+
+  const renderLatex = () => {
+    if (!result) return null;
+
+    // สร้าง Matrix แรก (เมทริกซ์ต้นฉบับพร้อม b)
+    const initailMatrix = formData.matA
+      .map((row, i) => [...row, "|", formData.matB[i]].join(" & "))
+      .join("\\\\");
+
+    // สร้าง Matrix ผลลัพธ์ (matrixA และ matrixB ที่ผ่านการคำนวณ)
+    const resultMatrix = result.matrixA
+      .map((row, i) => [...row, "|", result.matrixB[i]].join(" & "))
+      .join("\\\\");
+
+    // สร้างสมการผลลัพธ์แต่ละตัว
+    const solutions =
+      ` \\therefore ` +
+      result.X.map((x, i) => `x_{${i + 1}} = ${x.toFixed(4)}`).join(", \\ ");
+
+    const latex = `\\begin{bmatrix}
+      ${initailMatrix}
+      \\end{bmatrix} \\xrightarrow{\\text{Gauss-Jordan}} \\begin{bmatrix}${resultMatrix}
+      \\end{bmatrix}`;
+
+    return (
+      <div className="flex flex-col items-center space-y-6 p-4">
+        <BlockMath math={latex} />
+        <BlockMath math={solutions} />
+      </div>
+    );
+  };
 
   return (
     <>
       <div className="mb-2 flex flex-col items-center justify-center rounded-3xl py-4 px-4 bg-white w-3/5 my-4 max-w-full">
         <h2 className="text-center text-2xl font-bold mt-2">
-          Matrix Inversion
+          Gauss Jordan Elimination
         </h2>
         <div className="my-4">
           <form onSubmit={handleSubmit}>
@@ -219,16 +266,13 @@ function MatrixInversion() {
         </div>
       </div>
       {result && (
-        <div className="my-2 flex items-center justify-center rounded-3xl py-4 px-6 bg-white w-5/5 max-w-full">
-          <div className="flex flex-col items-center justify-center w-full">
-            {result.X.map((result, index) => (
-              <p key={index}>{`x${index + 1} = ${result}`}</p>
-            ))}
-          </div>
+        <div className="my-2 flex flex-col items-center justify-center rounded-3xl py-4 px-6 bg-white w-5/5 max-w-full">
+          <h3 className="text-xl font-semibold mt-4">Solution</h3>
+          {renderLatex()}
         </div>
       )}
     </>
   );
 }
 
-export default MatrixInversion;
+export default GaussJordanElimination;

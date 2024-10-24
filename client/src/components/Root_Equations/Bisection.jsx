@@ -105,6 +105,19 @@ function Bisection() {
       } else {
         setError("");
         const newResult = calculateBisection();
+
+        fetch(
+          `${import.meta.env.VITE_server_ip}:${
+            import.meta.env.VITE_server_port
+          }/save/rootequation/all`,
+          {
+            method: "POST",
+            body: JSON.stringify({ equation: formData.equation }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
         setResult(newResult);
       }
     },

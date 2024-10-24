@@ -1,17 +1,16 @@
 import React, { useCallback, useState, useEffect } from "react";
-import { evaluate } from "mathjs";
+import { evaluate, derivative } from "mathjs";
 import Plot from "react-plotly.js";
 
-function Secant() {
+function NewtonRaphson() {
   const [formData, setFormData] = useState({
     equation: "",
-    initialX0: "",
-    initialX1: "",
+    xInitial: "",
     tolerance: "",
   });
   const [result, setResult] = useState(null);
-  const [error, setError] = useState("");
   const [plotData, setPlotData] = useState(null);
+  const [error, setError] = useState("");
 
   const handleInputChange = useCallback((e) => {
     e.preventDefault();
@@ -20,24 +19,17 @@ function Secant() {
   }, []);
 
   const validateInput = useCallback(() => {
-    const { equation, initialX0, initialX1, tolerance } = formData;
-    const initialX0Num = parseFloat(initialX0);
-    const initialX1Num = parseFloat(initialX1);
+    const { equation, xInitial, tolerance } = formData;
+    const xInitNum = parseFloat(xInitial);
     const toleranceNum = parseFloat(tolerance);
-    if (
-      equation === "" ||
-      initialX0 === "" ||
-      initialX1 === "" ||
-      tolerance === ""
-    ) {
+
+    if (equation === "" || xInitial === "" || tolerance === "")
       return "Please fill in all fields.";
-    }
-    if (isNaN(initialX0Num) || isNaN(initialX1Num) || isNaN(toleranceNum)) {
-      return "Initial value(X0 and X1) and epsilon(error) must be number.";
-    }
-    if (toleranceNum <= 0) {
-      return "error must be greater than 0.";
-    }
+    if (isNaN(xInitNum) || isNaN(toleranceNum))
+      return "X initial value and tolerance(error) must be number.";
+
+    if (toleranceNum <= 0) return "error must be greater than 0.";
+
     try {
       evaluate(equation, { x: 1 });
     } catch (err) {
@@ -47,58 +39,55 @@ function Secant() {
     return null;
   }, [formData]);
 
-  const calSecant = useCallback(() => {
+  const calNewtionRaphson = useCallback(() => {
     const {
       equation,
-      initialX0: initialX0String,
-      initialX1: initialX1String,
+      xInitial: xInitString,
       tolerance: toleranceString,
     } = formData;
-    let initialX0 = parseFloat(initialX0String);
-    let initialX1 = parseFloat(initialX1String);
+    let xInitNum = parseFloat(xInitString);
     let tolerance = parseFloat(toleranceString);
-
-    let xCurr = initialX0;
-    let xCurrNext = initialX1;
-    let xNew;
-    let iter = 1;
-    let ea = 1;
-    let data = [];
-    let iterations = [];
-    let errors = [];
-    const MAX_ITER = 50;
+    let deriv = derivative(equation, "x").toString();
 
     const f = (x) => evaluate(equation, { x: x });
+    const fPrime = (x) => evaluate(deriv, { x: x });
     const checkError = (xOld, xNew) => Math.abs((xNew - xOld) / xNew);
 
-    do {
-      xNew =
-        xCurrNext -
-        (f(xCurrNext) * (xCurrNext - xCurr)) / (f(xCurrNext) - f(xCurr));
+    const data = [];
+    const iterations = [];
+    const errors = [];
 
-      if (f(xCurrNext) - f(xCurr) === 0) {
-        setError("ส่วนเป็นศูนย์ที่ x = " + xCurrNext);
+    let xCurr = xInitNum;
+    let xNext = xInitNum;
+    let iter = 1;
+    let ea = 1;
+    const MAX_ITER = 50;
+
+    do {
+      const fPrimeVal = fPrime(xCurr);
+      if (fPrimeVal === 0) {
+        setError("f'(x) เป็นศูนย์ที่ x = " + xCurr);
         break;
       }
-      ea = checkError(xCurrNext, xNew);
-      data.push({ iteration: iter, Xi: xNew, error: ea });
+
+      xNext = xCurr - f(xCurr) / fPrime(xCurr);
+      ea = checkError(xCurr, xNext);
+
+      data.push({ iteration: iter, Xi: xNext, error: ea });
       iterations.push(iter);
       errors.push(ea);
 
-      xCurr = xCurrNext;
-      xCurrNext = xNew;
+      xCurr = xNext;
       iter++;
     } while (ea > tolerance && iter <= MAX_ITER);
 
     setPlotData({ iterations, errors });
-
     return {
-      root: xNew,
+      root: xNext,
       data: data,
+      xInitial: xInitNum,
       iteration: data.length,
-      initialX0: initialX0,
-      initialX1: initialX1,
-      X: xNew,
+      equationDerivative: deriv,
       error: ea,
     };
   }, [formData]);
@@ -113,11 +102,25 @@ function Secant() {
         setPlotData(null);
       } else {
         setError("");
-        const newResult = calSecant();
+        const newResult = calNewtionRaphson();
+
+        fetch(
+          `${import.meta.env.VITE_server_ip}:${
+            import.meta.env.VITE_server_port
+          }/save/rootequation/all`,
+          {
+            method: "POST",
+            body: JSON.stringify({ equation: formData.equation }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
         setResult(newResult);
       }
     },
-    [validateInput, calSecant]
+    [validateInput, calNewtionRaphson]
   );
 
   useEffect(() => {
@@ -128,16 +131,16 @@ function Secant() {
   return (
     <>
       {/* Display equation */}
-      <div className="bg-contrast glass min-w-96 h-20 px-6 flex justify-center items-center rounded-3xl my-4">
+      <div className="bg-contrast glass min-w-96 h-20 px-6 flex flex-col justify-center items-center rounded-3xl my-4">
         <h2 className="text-center font-bold text-2xl text-gray-50">
           f(x) = {formData.equation}
         </h2>
       </div>
       {/* input form */}
       <div className=" mb-2 flex flex-col items-center justify-center rounded-3xl py-4 px-4 bg-white w-3/5">
-        <h2 className="text-white text-2xl font-bold">Secant Method</h2>
+        <h2 className="text-white text-2xl font-bold">Newton-Raphson Method</h2>
 
-        <div className="mt-4 w-1/3">
+        <div className="mt-4 w-1/3 ">
           <form
             action="#"
             className=" flex justify-center flex-col"
@@ -159,52 +162,36 @@ function Secant() {
               <div className="flex">
                 <label className="form-control w-1/2 max-w-xs ">
                   <div className="label">
-                    <span className="label-text">
-                      X<sub>0</sub>
-                    </span>
+                    <span className="label-text">x initial</span>
                   </div>
                   <input
                     type="text"
-                    placeholder="0"
+                    placeholder="0.1"
                     className="input input-bordered w-4/5 max-w-xs text-sm"
-                    id="initialX0"
+                    id="xInitial"
                     onChange={handleInputChange}
                   />
                 </label>
                 <label className="form-control w-1/2 max-w-xs">
                   <div className="label">
-                    <span className="label-text">
-                      X<sub>1</sub>
-                    </span>
+                    <span className="label-text">tolerance (ϵ)</span>
                   </div>
                   <input
                     type="text"
-                    placeholder="4"
-                    className="input input-bordered w-4/5 max-w-xs text-sm"
-                    id="initialX1"
+                    placeholder="0.000001"
+                    className="input input-bordered w-full max-w-xs text-sm"
+                    id="tolerance"
                     onChange={handleInputChange}
                   />
                 </label>
               </div>
-              <label className="form-control w-full max-w-xs">
-                <div className="label">
-                  <span className="label-text">tolerance (ϵ)</span>
-                </div>
-                <input
-                  type="text"
-                  placeholder="0.000001"
-                  className="input input-bordered w-full text-sm"
-                  id="tolerance"
-                  onChange={handleInputChange}
-                />
-              </label>
             </div>
 
             {error && (
               <p className="text-red-600 text-center mt-2 w-full">{error}</p>
             )}
 
-            <button className="btn mt-3 h-14 glass" type="submit">
+            <button className="btn mt-5 h-14 glass" type="submit">
               Calculate
             </button>
           </form>
@@ -246,7 +233,10 @@ function Secant() {
                 Iterations : {result.iteration}
               </h4>
               <h4 className="text-center my-6 text-xl">
-                error : {result.error}
+                error : {result.error.toFixed(6)}
+              </h4>
+              <h4 className="text-center my-6 text-xl">
+                f'(x) : {result.equationDerivative}
               </h4>
             </div>
             <table className="table table-zebra">
@@ -254,7 +244,7 @@ function Secant() {
                 <tr>
                   <th>Iteration</th>
                   <th>
-                    X<sub>i+1</sub>
+                    X<sub>i</sub>
                   </th>
                   <th>error</th>
                 </tr>
@@ -276,4 +266,4 @@ function Secant() {
   );
 }
 
-export default Secant;
+export default NewtonRaphson;

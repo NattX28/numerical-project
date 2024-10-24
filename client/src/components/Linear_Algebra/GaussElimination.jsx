@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from "react";
-import { det } from "mathjs";
+import { InlineMath, BlockMath } from "react-katex";
 
-function CramerRules() {
+function GaussElimination() {
   const [formData, setFormData] = useState({
     n: 3,
     matA: Array(3)
@@ -17,7 +17,7 @@ function CramerRules() {
     if (name === "n") {
       const n = value === "" ? "" : Math.max(1, parseInt(value, 10));
       setFormData((prev) => ({
-        n,
+        n: n,
         matA: Array(n)
           .fill()
           .map(() => Array(n).fill("")),
@@ -35,52 +35,62 @@ function CramerRules() {
         return newData;
       });
     }
-    setError(""); // Clear error when input change
+    setError("");
   }, []);
 
   const validateInput = useCallback(() => {
     const { n, matA, matB } = formData;
-    if (n === "" || n < 1) return "Matrix size must be positive integer.";
+    if (n === "" || n < 1) return "Matrix size must be positive integer";
 
     for (let i = 0; i < n; i++) {
-      for (let j = n; j < n; j++) {
-        if (matA[i][j] === "" || isNaN(parseFloat(matA[i][j]))) {
-          return `Invalid input in matrix A at position (${i + 1},${j + 1}).`;
-        }
+      for (let j = 0; j < n; j++) {
+        if (matA[i][j] === "" || isNaN(parseFloat(matA[i][j])))
+          return `Invalid input at matrix A at position A${i}${j}`;
       }
-      if (matB[i] === "" || isNaN(parseFloat(matB))) {
-        return `Invalid input in matrix B at position (${i + 1}).`;
-      }
+      if (matB[i] === "" || isNaN(parseFloat(matB[i])))
+        return `Invalid input at matrix B at position B${i}`;
     }
 
     return null;
   }, [formData]);
 
-  const calCramersRule = useCallback(() => {
+  const calGaussElimination = useCallback(() => {
     const { n, matA, matB } = formData;
-    // แปลงค่าเป็นตัวเลขก่อนการคำนวณ
-    const matrixA = matA.map((row) => row.map((val) => parseFloat(val) || 0));
-    const matrixB = matB.map((val) => parseFloat(val) || 0);
+    const matrixA = matA.map((row) => row.map((val) => parseFloat(val, 10)));
+    const matrixB = matB.map((val) => parseFloat(val));
+    let ratio;
 
-    // คำนวณ detA
-    const detA = det(matrixA);
-    if (detA === 0) {
-      setError("Determinat of matrix A is 0. Cannot calculate.");
-      return;
-    }
-
-    // คำนวณดีเทอร์มิแนนต์ของ Ai
-    const solutions = [];
+    // Forward Elimination
     for (let i = 0; i < n; i++) {
-      const ai2D = matrixA.map((row) => [...row]); // คัดลอกเมทริกซ์ A
-      for (let j = 0; j < n; j++) {
-        ai2D[j][i] = matrixB[j]; // แทนที่คอลัมน์ i ด้วยเมทริกซ์ B
+      if (matrixA[i][i] === 0) {
+        alert("Error: Divide by zero");
+        break;
       }
-      solutions.push(det(ai2D) / detA); // คำนวณ det(Ai)
+
+      for (let j = i + 1; j < n; j++) {
+        ratio = matrixA[j][i] / matrixA[i][i];
+        for (let k = i; k < n; k++) {
+          matrixA[j][k] -= ratio * matrixA[i][k];
+        }
+        matrixB[j] -= ratio * matrixB[i];
+      }
     }
 
-    return solutions;
-  }, [formData]);
+    // Back substitution
+    const xi = new Array(n).fill(0);
+    for (let i = n - 1; i >= 0; i--) {
+      xi[i] = matrixB[i];
+      for (let j = i + 1; j < n; j++) {
+        xi[i] -= matrixA[i][j] * xi[j];
+      }
+      xi[i] /= matrixA[i][i];
+    }
+    return {
+      matrixA: matrixA,
+      matrixB: matrixB,
+      X: xi,
+    };
+  });
 
   const handleSubmit = useCallback(
     (e) => {
@@ -91,17 +101,67 @@ function CramerRules() {
         setResult(null);
       } else {
         setError("");
-        const newResult = calCramersRule();
+        const newResult = calGaussElimination();
+
+        fetch(
+          `${import.meta.env.VITE_server_ip}:${
+            import.meta.env.VITE_server_port
+          }/save/linearalgebra/all`,
+          {
+            method: "POST",
+            body: JSON.stringify({
+              matA: formData.matA,
+              matB: formData.matB,
+            }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
         setResult(newResult);
       }
     },
-    [validateInput, calCramersRule]
+    [validateInput, calGaussElimination]
   );
+
+  const renderLatex = () => {
+    if (!result) return null;
+
+    // สร้าง Matrix แรก (เมทริกซ์ต้นฉบับพร้อม b)
+    const initailMatrix = formData.matA
+      .map((row, i) => [...row, "|", formData.matB[i]].join(" & "))
+      .join("\\\\");
+
+    // สร้าง Matrix ผลลัพธ์ (matrixA และ matrixB ที่ผ่านการคำนวณ)
+    const resultMatrix = result.matrixA
+      .map((row, i) => [...row, "|", result.matrixB[i]].join(" & "))
+      .join("\\\\");
+
+    // สร้างสมการผลลัพธ์แต่ละตัว
+    const solutions =
+      ` \\therefore ` +
+      result.X.map((x, i) => `x_{${i + 1}} = ${x.toFixed(4)}`).join(", \\ ");
+
+    const latex = `\\begin{bmatrix}
+      ${initailMatrix}
+      \\end{bmatrix} \\xrightarrow{\\text{Gauss-Eliminate}} \\begin{bmatrix}${resultMatrix}
+      \\end{bmatrix}`;
+
+    return (
+      <div className="flex flex-col items-center space-y-6 p-4">
+        <BlockMath math={latex} />
+        <BlockMath math={solutions} />
+      </div>
+    );
+  };
 
   return (
     <>
       <div className="mb-2 flex flex-col items-center justify-center rounded-3xl py-4 px-4 bg-white w-3/5 my-4 max-w-full">
-        <h2 className="text-center text-2xl font-bold mt-2">Cramer's Rule</h2>
+        <h2 className="text-center text-2xl font-bold mt-2">
+          Gauss Elimination
+        </h2>
         <div className="my-4">
           <form onSubmit={handleSubmit}>
             <div className="flex flex-col items-center">
@@ -110,13 +170,13 @@ function CramerRules() {
                   <div className="label">
                     <span className="label-text">Matrix size ( N x N )</span>
                   </div>
+
                   <input
                     type="number"
                     name="n"
                     value={formData.n}
                     onChange={handleInputChange}
                     className="input input-bordered w-full max-w-xs"
-                    min="1"
                   />
                 </label>
                 <button className="btn glass" type="submit">
@@ -129,7 +189,7 @@ function CramerRules() {
                   <div
                     className={`mt-6 grid gap-3`}
                     style={{
-                      gridTemplateColumns: `repeat(${formData.n}, minmax(0, 1fr))`,
+                      gridTemplateColumns: `repeat(${formData.n},minmax(0,1fr)`,
                     }}
                   >
                     {formData.matA.map((row, i) =>
@@ -138,10 +198,10 @@ function CramerRules() {
                           key={`A-${i}-${j}`}
                           type="text"
                           name={`A-${i}-${j}`}
-                          placeholder={`a${i + 1}${j + 1}`}
                           value={formData.matA[i][j]}
                           onChange={handleInputChange}
                           className="input input-bordered w-16 h-16 text-center"
+                          placeholder={`a${i + 1}${j + 1}`}
                         />
                       ))
                     )}
@@ -157,7 +217,7 @@ function CramerRules() {
                           key={`x-${i}`}
                           type="text"
                           placeholder={`x${i + 1}`}
-                          className="input input-bordered w-16 h-16 text-center "
+                          className="input input-bordered w-16 h-16 text-center"
                           disabled
                         />
                       ))}
@@ -171,8 +231,8 @@ function CramerRules() {
                     {formData.matB.map((_, i) => (
                       <input
                         key={`B-${i}`}
-                        name={`B-${i}`}
                         type="text"
+                        name={`B-${i}`}
                         placeholder={`b${i + 1}`}
                         value={formData.matB[i]}
                         onChange={handleInputChange}
@@ -184,22 +244,19 @@ function CramerRules() {
               </div>
             </div>
           </form>
+          {error && (
+            <p className="text-red-600 text-center mt-2 w-full">{error}</p>
+          )}
         </div>
       </div>
-
-      {error && <p className="text-red-600 text-center mt-2 w-full">{error}</p>}
-
       {result && (
-        <div className="my-2 flex items-center justify-center rounded-3xl py-4 px-6 bg-white w-5/5 max-w-full">
-          <div className="flex flex-col items-center justify-center w-full">
-            {result.map((result, index) => (
-              <p key={index}>{`x${index + 1} = ${result}`}</p>
-            ))}
-          </div>
+        <div className="my-2 flex flex-col items-center justify-center rounded-3xl py-4 px-6 bg-white w-5/5 max-w-full">
+          <h3 className="text-xl font-semibold mt-4">Solution</h3>
+          {renderLatex()}
         </div>
       )}
     </>
   );
 }
 
-export default CramerRules;
+export default GaussElimination;

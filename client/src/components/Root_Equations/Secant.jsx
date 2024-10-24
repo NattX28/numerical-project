@@ -2,10 +2,11 @@ import React, { useCallback, useState, useEffect } from "react";
 import { evaluate } from "mathjs";
 import Plot from "react-plotly.js";
 
-function OnePointIteration() {
+function Secant() {
   const [formData, setFormData] = useState({
     equation: "",
-    xInitial: "",
+    initialX0: "",
+    initialX1: "",
     tolerance: "",
   });
   const [result, setResult] = useState(null);
@@ -19,17 +20,24 @@ function OnePointIteration() {
   }, []);
 
   const validateInput = useCallback(() => {
-    const { equation, xInitial, tolerance } = formData;
-    const xInitNum = parseFloat(xInitial);
+    const { equation, initialX0, initialX1, tolerance } = formData;
+    const initialX0Num = parseFloat(initialX0);
+    const initialX1Num = parseFloat(initialX1);
     const toleranceNum = parseFloat(tolerance);
-
-    if (equation === "" || xInitial === "" || tolerance === "")
+    if (
+      equation === "" ||
+      initialX0 === "" ||
+      initialX1 === "" ||
+      tolerance === ""
+    ) {
       return "Please fill in all fields.";
-    if (isNaN(xInitNum) || isNaN(toleranceNum))
-      return "X initial value and tolerance(error) must be number.";
-
-    if (toleranceNum <= 0) return "error must be greater than 0.";
-
+    }
+    if (isNaN(initialX0Num) || isNaN(initialX1Num) || isNaN(toleranceNum)) {
+      return "Initial value(X0 and X1) and epsilon(error) must be number.";
+    }
+    if (toleranceNum <= 0) {
+      return "error must be greater than 0.";
+    }
     try {
       evaluate(equation, { x: 1 });
     } catch (err) {
@@ -39,37 +47,46 @@ function OnePointIteration() {
     return null;
   }, [formData]);
 
-  const calOnePointIteration = useCallback(() => {
+  const calSecant = useCallback(() => {
     const {
       equation,
-      xInitial: xInitialString,
+      initialX0: initialX0String,
+      initialX1: initialX1String,
       tolerance: toleranceString,
     } = formData;
-
-    let xInitial = parseFloat(xInitialString);
+    let initialX0 = parseFloat(initialX0String);
+    let initialX1 = parseFloat(initialX1String);
     let tolerance = parseFloat(toleranceString);
 
-    const checkError = (xOld, xNew) => Math.abs((xNew - xOld) / xNew);
-    const f = (x) => evaluate(equation, { x: x });
-
-    const MAX_ITER = 50;
-    let xNew = xInitial;
-    let xOld = xInitial;
+    let xCurr = initialX0;
+    let xCurrNext = initialX1;
+    let xNew;
     let iter = 1;
     let ea = 1;
-    const data = [];
-    const iterations = [];
-    const errors = [];
+    let data = [];
+    let iterations = [];
+    let errors = [];
+    const MAX_ITER = 50;
+
+    const f = (x) => evaluate(equation, { x: x });
+    const checkError = (xOld, xNew) => Math.abs((xNew - xOld) / xNew);
 
     do {
-      xNew = f(xOld);
-      ea = checkError(xOld, xNew);
+      xNew =
+        xCurrNext -
+        (f(xCurrNext) * (xCurrNext - xCurr)) / (f(xCurrNext) - f(xCurr));
 
+      if (f(xCurrNext) - f(xCurr) === 0) {
+        setError("ส่วนเป็นศูนย์ที่ x = " + xCurrNext);
+        break;
+      }
+      ea = checkError(xCurrNext, xNew);
       data.push({ iteration: iter, Xi: xNew, error: ea });
       iterations.push(iter);
       errors.push(ea);
 
-      xOld = xNew;
+      xCurr = xCurrNext;
+      xCurrNext = xNew;
       iter++;
     } while (ea > tolerance && iter <= MAX_ITER);
 
@@ -79,7 +96,8 @@ function OnePointIteration() {
       root: xNew,
       data: data,
       iteration: data.length,
-      xInitial: xInitial,
+      initialX0: initialX0,
+      initialX1: initialX1,
       X: xNew,
       error: ea,
     };
@@ -95,11 +113,25 @@ function OnePointIteration() {
         setPlotData(null);
       } else {
         setError("");
-        const newResult = calOnePointIteration();
+        const newResult = calSecant();
+
+        fetch(
+          `${import.meta.env.VITE_server_ip}:${
+            import.meta.env.VITE_server_port
+          }/save/rootequation/all`,
+          {
+            method: "POST",
+            body: JSON.stringify({ equation: formData.equation }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
         setResult(newResult);
       }
     },
-    [validateInput, calOnePointIteration]
+    [validateInput, calSecant]
   );
 
   useEffect(() => {
@@ -117,11 +149,9 @@ function OnePointIteration() {
       </div>
       {/* input form */}
       <div className=" mb-2 flex flex-col items-center justify-center rounded-3xl py-4 px-4 bg-white w-3/5">
-        <h2 className="text-white text-2xl font-bold">
-          One-Point Iteration Method
-        </h2>
+        <h2 className="text-white text-2xl font-bold">Secant Method</h2>
 
-        <div className="mt-4 w-1/3 ">
+        <div className="mt-4 w-1/3">
           <form
             action="#"
             className=" flex justify-center flex-col"
@@ -143,41 +173,58 @@ function OnePointIteration() {
               <div className="flex">
                 <label className="form-control w-1/2 max-w-xs ">
                   <div className="label">
-                    <span className="label-text">x initial</span>
+                    <span className="label-text">
+                      X<sub>0</sub>
+                    </span>
                   </div>
                   <input
                     type="text"
-                    placeholder="0.1"
+                    placeholder="0"
                     className="input input-bordered w-4/5 max-w-xs text-sm"
-                    id="xInitial"
+                    id="initialX0"
                     onChange={handleInputChange}
                   />
                 </label>
                 <label className="form-control w-1/2 max-w-xs">
                   <div className="label">
-                    <span className="label-text">tolerance (ϵ)</span>
+                    <span className="label-text">
+                      X<sub>1</sub>
+                    </span>
                   </div>
                   <input
                     type="text"
-                    placeholder="0.000001"
-                    className="input input-bordered w-full max-w-xs text-sm"
-                    id="tolerance"
+                    placeholder="4"
+                    className="input input-bordered w-4/5 max-w-xs text-sm"
+                    id="initialX1"
                     onChange={handleInputChange}
                   />
                 </label>
               </div>
+              <label className="form-control w-full max-w-xs">
+                <div className="label">
+                  <span className="label-text">tolerance (ϵ)</span>
+                </div>
+                <input
+                  type="text"
+                  placeholder="0.000001"
+                  className="input input-bordered w-full text-sm"
+                  id="tolerance"
+                  onChange={handleInputChange}
+                />
+              </label>
             </div>
 
             {error && (
               <p className="text-red-600 text-center mt-2 w-full">{error}</p>
             )}
 
-            <button className="btn mt-5 h-14 glass" type="submit">
+            <button className="btn mt-3 h-14 glass" type="submit">
               Calculate
             </button>
           </form>
         </div>
       </div>
+
       {plotData && (
         <div className="my-8 w-4/5 flex justify-center">
           <Plot
@@ -213,7 +260,7 @@ function OnePointIteration() {
                 Iterations : {result.iteration}
               </h4>
               <h4 className="text-center my-6 text-xl">
-                error : {result.error.toFixed(6)}
+                error : {result.error}
               </h4>
             </div>
             <table className="table table-zebra">
@@ -221,7 +268,7 @@ function OnePointIteration() {
                 <tr>
                   <th>Iteration</th>
                   <th>
-                    X<sub>i</sub>
+                    X<sub>i+1</sub>
                   </th>
                   <th>error</th>
                 </tr>
@@ -243,4 +290,4 @@ function OnePointIteration() {
   );
 }
 
-export default OnePointIteration;
+export default Secant;

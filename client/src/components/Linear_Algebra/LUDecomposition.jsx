@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from "react";
+import { BlockMath } from "react-katex";
 
-function GaussElimination() {
+function LUDecomposition() {
   const [formData, setFormData] = useState({
     n: 3,
     matA: Array(3)
@@ -53,43 +54,69 @@ function GaussElimination() {
     return null;
   }, [formData]);
 
-  const calGaussElimination = useCallback(() => {
+  const calLUDecomposition = useCallback(() => {
     const { n, matA, matB } = formData;
-    const matrixA = matA.map((row) => row.map((val) => parseFloat(val, 10)));
+    const matrixA = matA.map((row) => row.map((val) => parseFloat(val)));
     const matrixB = matB.map((val) => parseFloat(val));
-    let ratio;
 
-    // Forward Elimination
+    const L = Array(n)
+      .fill(0)
+      .map(() => Array(n).fill(0));
+    const U = Array(n)
+      .fill(0)
+      .map(() => Array(n).fill(0));
+
     for (let i = 0; i < n; i++) {
-      if (matrixA[i][i] === 0) {
-        alert("Error: Divide by zero");
-        break;
-      }
+      U[i][i] = 1; // ให้แนวทแยงของ U เป็น 1
 
-      for (let j = i + 1; j < n; j++) {
-        ratio = matrixA[j][i] / matrixA[i][i];
-        for (let k = i; k < n; k++) {
-          matrixA[j][k] -= ratio * matrixA[i][k];
+      // คำนวณค่าในคอลัมน์ที่ i ของ L
+      for (let j = i; j < n; j++) {
+        let sum = 0;
+        for (let k = 0; k < i; k++) {
+          sum += L[j][k] * U[k][i];
         }
-        matrixB[j] -= ratio * matrixB[i];
+        L[j][i] = matrixA[j][i] - sum;
+      }
+
+      // คำนวณค่าในแถวที่ i ของ L
+      for (let j = i + 1; j < n; j++) {
+        let sum = 0;
+        for (let k = 0; k < i; k++) {
+          sum += L[i][k] * U[k][j];
+        }
+        U[i][j] = (matrixA[i][j] - sum) / L[i][i];
       }
     }
 
-    // Back substitution
-    const xi = new Array(n).fill(0);
-    for (let i = n - 1; i >= 0; i--) {
-      xi[i] = matrixB[i];
-      for (let j = i + 1; j < n; j++) {
-        xi[i] -= matrixA[i][j] * xi[j];
+    // Ly = B
+    const y = Array(n).fill(0);
+    for (let i = 0; i < n; i++) {
+      let sum = 0;
+      for (let j = 0; j < i; j++) {
+        sum += L[i][j] * y[j];
       }
-      xi[i] /= matrixA[i][i];
+      y[i] = (matrixB[i] - sum) / L[i][i];
     }
+
+    // Ux = y
+    const xi = Array(n).fill(0);
+    for (let i = n - 1; i >= 0; i--) {
+      let sum = 0;
+      for (let j = i + 1; j < n; j++) {
+        sum += U[i][j] * xi[j];
+      }
+      xi[i] = y[i] - sum; // ไม่ต้องหารด้วย U[i][i] เพราะมันเป็น 1
+    }
+
     return {
       matrixA: matA,
       matrixB: matB,
+      matrixL: L,
+      matrixU: U,
+      matrixY: y,
       X: xi,
     };
-  });
+  }, [formData]);
 
   const handleSubmit = useCallback(
     (e) => {
@@ -100,18 +127,92 @@ function GaussElimination() {
         setResult(null);
       } else {
         setError("");
-        const newResult = calGaussElimination();
+        const newResult = calLUDecomposition();
+
+        fetch(
+          `${import.meta.env.VITE_server_ip}:${
+            import.meta.env.VITE_server_port
+          }/save/linearalgebra/all`,
+          {
+            method: "POST",
+            body: JSON.stringify({
+              matA: formData.matA,
+              matB: formData.matB,
+            }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
         setResult(newResult);
       }
     },
-    [validateInput, calGaussElimination]
+    [validateInput, calLUDecomposition]
   );
+
+  const renderLatex = () => {
+    if (!result) return null;
+
+    const matrixLLatex = result.matrixL
+      .map((row) => row.join(" & "))
+      .join("\\\\");
+    const matrixULatex = result.matrixU
+      .map((row) => row.join(" & "))
+      .join("\\\\");
+    const matYLatex = result.matrixY.map((val) => val.toFixed(4)).join("\\\\");
+
+    // สร้าง vector y แนวตั้ง
+    const yVector = result.matrixY.map((_, i) => `y_{${i + 1}}`).join(" \\\\ ");
+    // สร้าง vector x แนวตั้ง
+    const xVector = formData.matA.map((_, i) => `x_{${i + 1}}`).join(" \\\\ ");
+
+    const matBLatex = formData.matB.map((val) => val).join("\\\\");
+    const matXLatex = result.X.map((val) => val.toFixed(4)).join("\\\\");
+
+    // สร้างสมการผลลัพธ์แต่ละตัว
+    const ySolutions = result.matrixY
+      .map((y, i) => `y_{${i + 1}} = ${y.toFixed(4)}`)
+      .join(", \\ ");
+    const solutions =
+      ` \\therefore ` +
+      result.X.map((x, i) => `x_{${i + 1}} = ${x.toFixed(4)}`).join(", \\ ");
+
+    const LyxB = `From \\ LY = B \\\\
+\\begin{bmatrix}
+  ${matrixLLatex}
+  \\end{bmatrix}
+\\begin{Bmatrix}
+  ${yVector}
+  \\end{Bmatrix} = \\begin{Bmatrix}
+  ${matBLatex}
+  \\end{Bmatrix}`;
+
+    const UXxY = `From \\ UX = Y \\\\
+\\begin{bmatrix}
+  ${matrixULatex}
+  \\end{bmatrix}
+\\begin{Bmatrix}
+  ${xVector}
+  \\end{Bmatrix} = \\begin{Bmatrix}
+  ${matYLatex}
+  \\end{Bmatrix}`;
+
+    return (
+      <div className="flex flex-col items-center space-y-6 p-4">
+        <BlockMath math={LyxB} />
+        <BlockMath math={ySolutions} />
+        <BlockMath math={UXxY} />
+        <BlockMath math={solutions} />
+      </div>
+    );
+  };
 
   return (
     <>
       <div className="mb-2 flex flex-col items-center justify-center rounded-3xl py-4 px-4 bg-white w-3/5 my-4 max-w-full">
         <h2 className="text-center text-2xl font-bold mt-2">
-          Gauss Elimination
+          LU Decomposition
         </h2>
         <div className="my-4">
           <form onSubmit={handleSubmit}>
@@ -201,16 +302,13 @@ function GaussElimination() {
         </div>
       </div>
       {result && (
-        <div className="my-2 flex items-center justify-center rounded-3xl py-4 px-6 bg-white w-5/5 max-w-full">
-          <div className="flex flex-col items-center justify-center w-full">
-            {result.X.map((result, index) => (
-              <p key={index}>{`x${index + 1} = ${result}`}</p>
-            ))}
-          </div>
+        <div className="my-2 flex flex-col items-center justify-center rounded-3xl py-4 px-6 bg-white w-5/5 max-w-full">
+          <h3 className="text-xl font-semibold mt-4">Solution</h3>
+          {renderLatex()}
         </div>
       )}
     </>
   );
 }
 
-export default GaussElimination;
+export default LUDecomposition;

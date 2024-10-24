@@ -1,16 +1,17 @@
 import React, { useCallback, useState, useEffect } from "react";
-import { evaluate, derivative } from "mathjs";
+import { evaluate } from "mathjs";
 import Plot from "react-plotly.js";
 
-function NewtonRaphson() {
+function FalsePosition() {
   const [formData, setFormData] = useState({
     equation: "",
-    xInitial: "",
+    xl: "",
+    xr: "",
     tolerance: "",
   });
   const [result, setResult] = useState(null);
-  const [plotData, setPlotData] = useState(null);
   const [error, setError] = useState("");
+  const [plotData, setPlotData] = useState(null);
 
   const handleInputChange = useCallback((e) => {
     e.preventDefault();
@@ -19,14 +20,18 @@ function NewtonRaphson() {
   }, []);
 
   const validateInput = useCallback(() => {
-    const { equation, xInitial, tolerance } = formData;
-    const xInitNum = parseFloat(xInitial);
+    const { equation, xl, xr, tolerance } = formData;
+    const xlNum = parseFloat(xl);
+    const xrNum = parseFloat(xr);
     const toleranceNum = parseFloat(tolerance);
 
-    if (equation === "" || xInitial === "" || tolerance === "")
+    if (!equation || xl === "" || xr === "" || tolerance === "")
       return "Please fill in all fields.";
-    if (isNaN(xInitNum) || isNaN(toleranceNum))
-      return "X initial value and tolerance(error) must be number.";
+
+    if (isNaN(xlNum) || isNaN(xrNum) || isNaN(toleranceNum))
+      return "Xl, Xr and tolerance(error) must be number.";
+
+    if (xlNum >= xrNum) return "Xl must be less than Xr.";
 
     if (toleranceNum <= 0) return "error must be greater than 0.";
 
@@ -39,55 +44,56 @@ function NewtonRaphson() {
     return null;
   }, [formData]);
 
-  const calNewtionRaphson = useCallback(() => {
+  const calFalsePosition = useCallback(() => {
     const {
       equation,
-      xInitial: xInitString,
+      xl: xlString,
+      xr: xrString,
       tolerance: toleranceString,
     } = formData;
-    let xInitNum = parseFloat(xInitString);
-    let tolerance = parseFloat(toleranceString);
-    let deriv = derivative(equation, "x").toString();
+    let xl = parseFloat(xlString);
+    let xr = parseFloat(xrString);
+    const tolerance = parseFloat(toleranceString);
 
-    const f = (x) => evaluate(equation, { x: x });
-    const fPrime = (x) => evaluate(deriv, { x: x });
     const checkError = (xOld, xNew) => Math.abs((xNew - xOld) / xNew);
+    const f = (x) => evaluate(equation, { x: x });
 
-    const data = [];
-    const iterations = [];
-    const errors = [];
-
-    let xCurr = xInitNum;
-    let xNext = xInitNum;
-    let iter = 1;
+    let xiOld, xiNew;
     let ea = 1;
     const MAX_ITER = 50;
+    let iter = 1;
+    const data = [];
+    const errors = [];
+    const iterations = [];
 
     do {
-      const fPrimeVal = fPrime(xCurr);
-      if (fPrimeVal === 0) {
-        setError("f'(x) เป็นศูนย์ที่ x = " + xCurr);
-        break;
+      xiNew = (xl * f(xr) - xr * f(xl)) / (f(xr) - f(xl));
+      if (f(xiNew) * f(xr) < 0) {
+        xl = xiNew;
+      } else {
+        xr = xiNew;
       }
 
-      xNext = xCurr - f(xCurr) / fPrime(xCurr);
-      ea = checkError(xCurr, xNext);
+      if (iter > 1) {
+        ea = checkError(xiOld, xiNew);
+        console.log(ea);
+      }
 
-      data.push({ iteration: iter, Xi: xNext, error: ea });
-      iterations.push(iter);
+      data.push({ iteration: iter, Xl: xl, Xi: xiNew, Xr: xr, error: ea });
       errors.push(ea);
+      iterations.push(iter);
 
-      xCurr = xNext;
+      xiOld = xiNew;
       iter++;
-    } while (ea > tolerance && iter <= MAX_ITER);
+    } while (iter <= MAX_ITER && ea > tolerance);
 
     setPlotData({ iterations, errors });
     return {
-      root: xNext,
-      data: data,
-      xInitial: xInitNum,
+      root: xiNew,
       iteration: data.length,
-      equationDerivative: deriv,
+      data: data,
+      xl: xl,
+      xr: xr,
       error: ea,
     };
   }, [formData]);
@@ -102,11 +108,25 @@ function NewtonRaphson() {
         setPlotData(null);
       } else {
         setError("");
-        const newResult = calNewtionRaphson();
+        const newResult = calFalsePosition();
+
+        fetch(
+          `${import.meta.env.VITE_server_ip}:${
+            import.meta.env.VITE_server_port
+          }/save/rootequation/all`,
+          {
+            method: "POST",
+            body: JSON.stringify({ equation: formData.equation }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
         setResult(newResult);
       }
     },
-    [validateInput, calNewtionRaphson]
+    [validateInput, calFalsePosition]
   );
 
   useEffect(() => {
@@ -117,14 +137,14 @@ function NewtonRaphson() {
   return (
     <>
       {/* Display equation */}
-      <div className="bg-contrast glass min-w-96 h-20 px-6 flex flex-col justify-center items-center rounded-3xl my-4">
+      <div className="bg-contrast glass min-w-96 h-20 px-6 flex justify-center items-center rounded-3xl my-4">
         <h2 className="text-center font-bold text-2xl text-gray-50">
           f(x) = {formData.equation}
         </h2>
       </div>
       {/* input form */}
       <div className=" mb-2 flex flex-col items-center justify-center rounded-3xl py-4 px-4 bg-white w-3/5">
-        <h2 className="text-white text-2xl font-bold">Newton-Raphson Method</h2>
+        <h2 className="text-white text-2xl font-bold">False-Position Method</h2>
 
         <div className="mt-4 w-1/3 ">
           <form
@@ -148,36 +168,48 @@ function NewtonRaphson() {
               <div className="flex">
                 <label className="form-control w-1/2 max-w-xs ">
                   <div className="label">
-                    <span className="label-text">x initial</span>
+                    <span className="label-text">xl</span>
                   </div>
                   <input
                     type="text"
-                    placeholder="0.1"
+                    placeholder="0"
                     className="input input-bordered w-4/5 max-w-xs text-sm"
-                    id="xInitial"
+                    id="xl"
                     onChange={handleInputChange}
                   />
                 </label>
                 <label className="form-control w-1/2 max-w-xs">
                   <div className="label">
-                    <span className="label-text">tolerance (ϵ)</span>
+                    <span className="label-text">xr</span>
                   </div>
                   <input
                     type="text"
-                    placeholder="0.000001"
-                    className="input input-bordered w-full max-w-xs text-sm"
-                    id="tolerance"
+                    placeholder="4"
+                    className="input input-bordered w-4/5 max-w-xs text-sm"
+                    id="xr"
                     onChange={handleInputChange}
                   />
                 </label>
               </div>
+              <label className="form-control w-full max-w-xs">
+                <div className="label">
+                  <span className="label-text">tolerance (ϵ)</span>
+                </div>
+                <input
+                  type="text"
+                  placeholder="0.000001"
+                  className="input input-bordered w-full text-sm"
+                  id="tolerance"
+                  onChange={handleInputChange}
+                />
+              </label>
             </div>
 
             {error && (
               <p className="text-red-600 text-center mt-2 w-full">{error}</p>
             )}
 
-            <button className="btn mt-5 h-14 glass" type="submit">
+            <button className="btn mt-3 h-14 glass" type="submit">
               Calculate
             </button>
           </form>
@@ -221,14 +253,13 @@ function NewtonRaphson() {
               <h4 className="text-center my-6 text-xl">
                 error : {result.error.toFixed(6)}
               </h4>
-              <h4 className="text-center my-6 text-xl">
-                f'(x) : {result.equationDerivative}
-              </h4>
             </div>
             <table className="table table-zebra">
               <thead>
                 <tr>
                   <th>Iteration</th>
+                  <th>Xl</th>
+                  <th>Xr</th>
                   <th>
                     X<sub>i</sub>
                   </th>
@@ -239,6 +270,8 @@ function NewtonRaphson() {
                 {result.data.map((row, index) => (
                   <tr key={index}>
                     <td>{row.iteration}</td>
+                    <td>{row.Xl.toFixed(6)}</td>
+                    <td>{row.Xr.toFixed(6)}</td>
                     <td>{row.Xi.toFixed(6)}</td>
                     <td>{row.error.toFixed(6)}</td>
                   </tr>
@@ -252,4 +285,4 @@ function NewtonRaphson() {
   );
 }
 
-export default NewtonRaphson;
+export default FalsePosition;
