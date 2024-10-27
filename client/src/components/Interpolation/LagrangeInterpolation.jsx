@@ -181,7 +181,7 @@ function LagrangeInterpolation() {
       fetch(
         `${import.meta.env.VITE_server_ip}:${
           import.meta.env.VITE_server_port
-        }/save/interpolation/all`,
+        }/api/save/interpolation/all`,
         {
           method: "POST",
           body: JSON.stringify({

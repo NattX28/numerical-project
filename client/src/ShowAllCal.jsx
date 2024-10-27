@@ -15,7 +15,7 @@ function ShowAllCal() {
       const response = await fetch(
         `${import.meta.env.VITE_server_ip}:${
           import.meta.env.VITE_server_port
-        }/load/rootequation/all/100`
+        }/api/load/rootequation/all/100`
       ); // ดึง 100 สมการ
       const data = await response.json();
 
@@ -38,7 +38,7 @@ function ShowAllCal() {
       const response = await fetch(
         `${import.meta.env.VITE_server_ip}:${
           import.meta.env.VITE_server_port
-        }/load/linearalgebra/all/100`
+        }/api/load/linearalgebra/all/100`
       ); // ดึง 100 สมการ
       const data = await response.json();
 
@@ -61,7 +61,7 @@ function ShowAllCal() {
       const response = await fetch(
         `${import.meta.env.VITE_server_ip}:${
           import.meta.env.VITE_server_port
-        }/load/interpolation/all/100`
+        }/api/load/interpolation/all/100`
       ); // ดึง 100 สมการ
       const data = await response.json();
 

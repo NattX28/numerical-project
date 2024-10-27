@@ -118,7 +118,7 @@ function Secant() {
         fetch(
           `${import.meta.env.VITE_server_ip}:${
             import.meta.env.VITE_server_port
-          }/save/rootequation/all`,
+          }/api/save/rootequation/all`,
           {
             method: "POST",
             body: JSON.stringify({ equation: formData.equation }),

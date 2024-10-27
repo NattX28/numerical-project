@@ -137,7 +137,7 @@ function JacobiIteration() {
         fetch(
           `${import.meta.env.VITE_server_ip}:${
             import.meta.env.VITE_server_port
-          }/save/linearalgebra/all`,
+          }/api/save/linearalgebra/all`,
           {
             method: "POST",
             body: JSON.stringify({

@@ -24,6 +24,8 @@ app.use(
 // app.use(helmet());
 app.use(express.json()); // เพื่ออ่านไฟล์ json / body ที่เป็น json
 
+app.use(express.static(path.join(__dirname, "public")));
+
 app.use(
   timeout({
     timeout: 5000,
@@ -59,22 +61,24 @@ app.use((req, res, next) => {
 }); // middle ware
 
 app.get("/", (req, res) => {
-  return res.status(200).send("Hello World");
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
+// เพิ่ม prefix "/api" สำหรับ routes ทั้งหมด
 const routesPath = path.join(__dirname, "middleware");
 fs.readdirSync(routesPath).forEach((folder) => {
   const routeSubPath = path.join(routesPath, folder);
   fs.readdirSync(routeSubPath).forEach((file) => {
     if (file.endsWith(".js")) {
       const route = require(path.join(routeSubPath, file));
-      app.use(route);
+      app.use("/api", route); // เพิ่ม prefix '/api'
     }
   });
 });
 
+// ปรับ 404 route
 app.get("*", (req, res) => {
-  return res.status(404).send("Not Found");
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 app.listen(port, () => {
