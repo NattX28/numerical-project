@@ -4,8 +4,10 @@ WORKDIR /app/client
 COPY client/package*.json ./
 RUN npm install
 COPY client/ ./
-# Set client environment variables if needed
-ENV VITE_API_URL=/api
+
+# แก้ไข environment variables สำหรับ production
+ENV VITE_API_URL=/api 
+
 RUN npm run build
 
 # Build stage for Server
@@ -19,20 +21,19 @@ COPY server/ ./
 FROM node:18-alpine
 WORKDIR /app
 
-# Copy built client files to server's public directory
+# Copy built client files and server files
 COPY --from=client-builder /app/client/dist ./server/public
-
-# Copy server files and install production dependencies
 COPY --from=server-builder /app/server ./server
 WORKDIR /app/server
 RUN npm install --production
 
 # Environment variables
-ENV PORT=3000
+ENV PORT=10000
 ENV NODE_ENV=production
+ENV MONGODB_URI=mongodb+srv://s6604062630200:6y7pMU0oPFRuoAZi@numericalmethoddb.lq37f.mongodb.net/?retryWrites=true&w=majority&appName=NumericalMethodDB
 
-# Expose only server port
-EXPOSE 3000
+# Expose port
+EXPOSE 10000
 
 # Start the server
 CMD ["node", "index.js"]

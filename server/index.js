@@ -8,7 +8,7 @@ const rateLimit = require("express-rate-limit"); // กันคนยิงเ�
 const timeout = require("express-timeout-handler").handler;
 
 const app = express();
-const port = process.env.PORT || 3000;
+// const port = process.env.PORT || 3000;
 const { start, disconnect } = require("./mongo");
 
 start();
@@ -64,6 +64,10 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
+app.get("/api/test", (req, res) => {
+  res.send(res.status(200).json({ status: "pass api test" }));
+});
+
 // เพิ่ม prefix "/api" สำหรับ routes ทั้งหมด
 const routesPath = path.join(__dirname, "middleware");
 fs.readdirSync(routesPath).forEach((folder) => {
@@ -81,8 +85,8 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-app.listen(port, () => {
-  console.log("Server running...");
+app.listen(10000, "0.0.0.0", () => {
+  console.log("Server is running on port 10000");
 });
 
-disconnect();
+// disconnect();

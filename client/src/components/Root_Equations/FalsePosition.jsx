@@ -110,18 +110,13 @@ function FalsePosition() {
         setError("");
         const newResult = calFalsePosition();
 
-        fetch(
-          `${import.meta.env.VITE_server_ip}:${
-            import.meta.env.VITE_server_port
-          }/api/save/rootequation/all`,
-          {
-            method: "POST",
-            body: JSON.stringify({ equation: formData.equation }),
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        fetch(`/api/save/rootequation/all`, {
+          method: "POST",
+          body: JSON.stringify({ equation: formData.equation }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
 
         setResult(newResult);
       }

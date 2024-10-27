@@ -9,7 +9,7 @@ function App() {
   return (
     <>
       <div className="hero bg-secondary min-h-screen flex flex-col pl-4 pr-4">
-        <Headers />
+        {/* <Headers /> */}
         <Hero setShowCal={setShowCal} />
         {showCal && <ShowAllCal />}
       </div>

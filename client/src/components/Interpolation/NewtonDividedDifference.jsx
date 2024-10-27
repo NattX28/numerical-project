@@ -166,21 +166,16 @@ function NewtonDividedDifference() {
       const matX = formData.points.map((val) => val.x);
       const matFX = formData.points.map((val) => val.fx);
 
-      fetch(
-        `${import.meta.env.VITE_server_ip}:${
-          import.meta.env.VITE_server_port
-        }/api/save/interpolation/all`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            matX: matX,
-            matFX: matFX,
-          }),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      fetch(`/api/save/interpolation/all`, {
+        method: "POST",
+        body: JSON.stringify({
+          matX: matX,
+          matFX: matFX,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
       setResult({ latex });
     },

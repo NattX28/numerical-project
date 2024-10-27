@@ -12,11 +12,7 @@ function ShowAllCal() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(
-        `${import.meta.env.VITE_server_ip}:${
-          import.meta.env.VITE_server_port
-        }/api/load/rootequation/all/100`
-      ); // ดึง 100 สมการ
+      const response = await fetch("/api/load/rootequation/all/100");
       const data = await response.json();
 
       if (data.status === "pass") {
@@ -35,11 +31,7 @@ function ShowAllCal() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(
-        `${import.meta.env.VITE_server_ip}:${
-          import.meta.env.VITE_server_port
-        }/api/load/linearalgebra/all/100`
-      ); // ดึง 100 สมการ
+      const response = await fetch(`/api/load/linearalgebra/all/100`); // ดึง 100 สมการ
       const data = await response.json();
 
       if (data.status === "pass") {
@@ -58,11 +50,7 @@ function ShowAllCal() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(
-        `${import.meta.env.VITE_server_ip}:${
-          import.meta.env.VITE_server_port
-        }/api/load/interpolation/all/100`
-      ); // ดึง 100 สมการ
+      const response = await fetch(`/api/load/interpolation/all/100`); // ดึง 100 สมการ
       const data = await response.json();
 
       if (data.status === "pass") {

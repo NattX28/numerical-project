@@ -134,21 +134,16 @@ function GaussSeidelIteration() {
         setError("");
         const newResult = calGaussSeidelIteration();
 
-        fetch(
-          `${import.meta.env.VITE_server_ip}:${
-            import.meta.env.VITE_server_port
-          }/api/save/linearalgebra/all`,
-          {
-            method: "POST",
-            body: JSON.stringify({
-              matA: formData.matA,
-              matB: formData.matB,
-            }),
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        fetch(`/api/save/linearalgebra/all`, {
+          method: "POST",
+          body: JSON.stringify({
+            matA: formData.matA,
+            matB: formData.matB,
+          }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
 
         setResult(newResult);
       }
