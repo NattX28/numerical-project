@@ -1,0 +1,236 @@
+openapi: 3.0.0
+info:
+  title: Mathematical Operations API
+  description: API for handling various mathematical operations including root equations, linear algebra, and interpolation
+  version: 1.0.0
+
+servers:
+  - url: /api
+
+paths:
+  /save/rootequation/all:
+    post:
+      summary: Save equation of root equation
+      description: Saves only the root equations (for example, 43x-7) that the user enters into the database. It must be calculated successfully first only (before the calculation is successful Passed the verification of correct data entry first)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                equation:
+                  type: string
+                  description: The equation to be saved (should not contain special characters like '"{}[]=&%#@!')
+              required:
+                - equation
+      responses:
+        "200":
+          description: Equation saved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "pass"
+        "400":
+          description: Bad request or invalid equation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  error:
+                    type: string
+                    example: "Bad Request"
+
+  /load/rootequation/all/{limit}:
+    get:
+      summary: Load root equations
+      description: Extract a limited number of random root equations from the database.
+      parameters:
+        - in: path
+          name: limit
+          schema:
+            type: integer
+            default: 1
+          required: false
+          description: Number of equations to retrieve
+      responses:
+        "200":
+          description: Equations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "pass"
+                  equations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        equation:
+                          type: string
+
+  /save/linearalgebra/all:
+    post:
+      summary: Save linear algebra matrices
+      description: Save matrices A and B to the database
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                matA:
+                  type: string
+                  description: Matrix A (should not contain special characters like {}=&%#@!())
+                matB:
+                  type: string
+                  description: Matrix B (should not contain special characters like {}=&%#@!())
+              required:
+                - matA
+                - matB
+      responses:
+        "200":
+          description: Matrices saved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "pass"
+        "400":
+          description: Bad request or invalid matrices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  error:
+                    type: string
+
+  /load/linearalgebra/all/{limit}:
+    get:
+      summary: Load linear algebra matrices
+      description: Retrieve matrices from the database
+      parameters:
+        - in: path
+          name: limit
+          schema:
+            type: integer
+            default: 1
+          required: false
+          description: Number of matrix pairs to retrieve
+      responses:
+        "200":
+          description: Matrices retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "pass"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        matA:
+                          type: string
+                        matB:
+                          type: string
+
+  /save/interpolation/all:
+    post:
+      summary: Save interpolation points
+      description: Save X and F(X) points for interpolation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                matX:
+                  type: string
+                  description: X values (should not contain special characters like {}=&%#@!())
+                matFX:
+                  type: string
+                  description: F(X) values (should not contain special characters like {}=&%#@!())
+              required:
+                - matX
+                - matFX
+      responses:
+        "200":
+          description: Points saved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "pass"
+        "400":
+          description: Bad request or invalid points
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  error:
+                    type: string
+
+  /load/interpolation/all/{limit}:
+    get:
+      summary: Load interpolation points
+      description: Retrieve interpolation points from the database
+      parameters:
+        - in: path
+          name: limit
+          schema:
+            type: integer
+            default: 1
+          required: false
+          description: Number of point sets to retrieve
+      responses:
+        "200":
+          description: Points retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "pass"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        matX:
+                          type: string
+                        matFX:
+                          type: string
+
+components:
+  schemas: {}
