@@ -117,6 +117,7 @@ function JacobiIteration() {
       data: tempData,
       tolerance: toleranceNum,
       iteration: iterInLoop,
+      error: maxError,
     };
     setX(xiNew);
 
@@ -262,17 +263,20 @@ function JacobiIteration() {
       {result && (
         <div className="my-8 w-4/5">
           <div className="overflow-x-auto bg-white rounded-3xl">
-            {/* <div className="flex justify-around w-full">
-                  <h4 className="text-center my-6 text-xl">
-                    Root found : x = {result.root.toFixed(6)}
-                  </h4>
-                  <h4 className="text-center my-6 text-xl">
-                    Iterations : {result.iteration}
-                  </h4>
-                  <h4 className="text-center my-6 text-xl">
-                    error : {result.error}
-                  </h4>
-                </div> */}
+            <div className="flex justify-around w-full">
+              {x.map((val, index) => (
+                <h4 className="text-center my-6 text-xl">
+                  x<sub>{index + 1}</sub> = {val.toFixed(6)}
+                </h4>
+              ))}
+
+              <h4 className="text-center my-6 text-xl">
+                Iterations : {result.iteration}
+              </h4>
+              <h4 className="text-center my-6 text-xl">
+                Max error : {result.error.toFixed(6)}
+              </h4>
+            </div>
             <table className="table table-zebra">
               <thead>
                 <tr>

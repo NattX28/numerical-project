@@ -38,8 +38,6 @@ function Hero({ setShowCal }) {
     { label: "Linear Algebra", value: "Linear Algebra" },
     { label: "Interpolation", value: "Interpolation" },
     { label: "Extrapolation", value: "Extrapolation" },
-    { label: "Integration", value: "Integration" },
-    { label: "Differentiation", value: "Differentiation" },
   ];
 
   const solution = {
@@ -60,21 +58,13 @@ function Hero({ setShowCal }) {
       "Cholesky Decomposition Methods",
       "Jacobi Iteration Methods",
       "Gauss-Seidel Methods",
-      "Conjugate Gradient Methods",
     ],
     Interpolation: [
       "Newton divided-differences",
       "Lagrange Interpolation",
       "Spline Interpolation",
     ],
-    Extrapolation: ["Simple Regression", "Multiple Regression"],
-    Integration: [
-      "Trapezoidal Rule",
-      "Composite Trapezoidal Rule",
-      "Simpson Rule",
-      "Composite Simpson Rule",
-    ],
-    Differentiation: ["Numerical Differentiation"],
+    Extrapolation: ["Simple Regression"],
   };
 
   useEffect(() => {

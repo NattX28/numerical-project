@@ -74,129 +74,144 @@ function ShowAllCal() {
   }, []);
 
   return (
-    <div className="my-10">
-      <div role="tablist" className="tabs tabs-lifted">
-        <input
-          type="radio"
-          name="my_tabs_2"
-          role="tab"
-          className="tab"
-          aria-label="Root Equation"
-          defaultChecked
-        />
-        <div
-          role="tabpanel"
-          className="tab-content bg-base-100 border-base-300 rounded-box p-6"
-        >
-          {loading ? (
-            <div>Loading...</div>
-          ) : error ? (
-            <div className="text-red-500">Error: {error}</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="table table-zebra">
-                <thead>
-                  <tr>
-                    <th>No.</th>
-                    <th>Equation</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rootEquations.map((item, index) => (
-                    <tr key={index}>
-                      <td>{index + 1}</td>
-                      <td>{item.equation}</td>
+    <>
+      <h2 className="text-3xl font-semibold mt-10">Archive</h2>
+      <div className="my-10">
+        <div role="tablist" className="tabs tabs-lifted">
+          <input
+            type="radio"
+            name="my_tabs_2"
+            role="tab"
+            className="tab"
+            aria-label="Root Equation"
+            defaultChecked
+          />
+          <div
+            role="tabpanel"
+            className="tab-content bg-base-100 border-base-300 rounded-box p-6"
+          >
+            {loading ? (
+              <div className="flex w-52 flex-col gap-4">
+                <div className="skeleton h-8 w-full"></div>
+                <div className="skeleton h-8 w-full"></div>
+                <div className="skeleton h-8 w-full"></div>
+              </div>
+            ) : error ? (
+              <div className="text-red-500">Error: {error}</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="table table-zebra">
+                  <thead>
+                    <tr>
+                      <th>No.</th>
+                      <th>Equation</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                  </thead>
+                  <tbody>
+                    {rootEquations.map((item, index) => (
+                      <tr key={index}>
+                        <td>{index + 1}</td>
+                        <td>{item.equation}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
 
-        {/* Tab อื่นๆ คงเดิม */}
-        <input
-          type="radio"
-          name="my_tabs_2"
-          role="tab"
-          className="tab"
-          aria-label="Linear Algebra"
-        />
-        <div
-          role="tabpanel"
-          className="tab-content bg-base-100 border-base-300 rounded-box p-6"
-        >
-          {loading ? (
-            <div>Loading...</div>
-          ) : error ? (
-            <div className="text-red-500">Error: {error}</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="table table-zebra">
-                <thead>
-                  <tr>
-                    <th>No.</th>
-                    <th>matrix A</th>
-                    <th>matrix B</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {linear.map((item, index) => (
-                    <tr key={index}>
-                      <td>{index + 1}</td>
-                      {console.log(item)}
-                      <td>{`[${item.matA.map(
-                        (row) => `[${row.map((val) => `${val}`)}]`
-                      )}]`}</td>
-                      <td>{`[${item.matB.map((val) => `${val}`)}]`}</td>
+          {/* Tab อื่นๆ คงเดิม */}
+          <input
+            type="radio"
+            name="my_tabs_2"
+            role="tab"
+            className="tab"
+            aria-label="Linear Algebra"
+          />
+          <div
+            role="tabpanel"
+            className="tab-content bg-base-100 border-base-300 rounded-box p-6"
+          >
+            {loading ? (
+              <div className="flex w-52 flex-col gap-4">
+                <div className="skeleton h-8 w-full"></div>
+                <div className="skeleton h-8 w-full"></div>
+                <div className="skeleton h-8 w-full"></div>
+              </div>
+            ) : error ? (
+              <div className="text-red-500">Error: {error}</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="table table-zebra">
+                  <thead>
+                    <tr>
+                      <th>No.</th>
+                      <th>matrix A</th>
+                      <th>matrix B</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                  </thead>
+                  <tbody>
+                    {linear.map((item, index) => (
+                      <tr key={index}>
+                        <td>{index + 1}</td>
+                        {console.log(item)}
+                        <td>{`[${item.matA.map(
+                          (row) => `[${row.map((val) => `${val}`)}]`
+                        )}]`}</td>
+                        <td>{`[${item.matB.map((val) => `${val}`)}]`}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
 
-        <input
-          type="radio"
-          name="my_tabs_2"
-          role="tab"
-          className="tab"
-          aria-label="Interpolation & Extrapolation"
-        />
-        <div
-          role="tabpanel"
-          className="tab-content bg-base-100 border-base-300 rounded-box p-6"
-        >
-          {loading ? (
-            <div>Loading...</div>
-          ) : error ? (
-            <div className="text-red-500">Error: {error}</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="table table-zebra">
-                <thead>
-                  <tr>
-                    <th>No.</th>
-                    <th>X</th>
-                    <th>fx</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {interpolation.map((item, index) => (
-                    <tr key={index}>
-                      <td>{index + 1}</td>
-                      <td>{`[${item.matX.map((val) => `${val}`)}]`}</td>
-                      <td>{`[${item.matFX.map((val) => `${val}`)}]`}</td>
+          <input
+            type="radio"
+            name="my_tabs_2"
+            role="tab"
+            className="tab"
+            aria-label="Interpolation & Extrapolation"
+          />
+          <div
+            role="tabpanel"
+            className="tab-content bg-base-100 border-base-300 rounded-box p-6"
+          >
+            {loading ? (
+              <div className="flex w-52 flex-col gap-4">
+                <div className="skeleton h-8 w-full"></div>
+                <div className="skeleton h-8 w-full"></div>
+                <div className="skeleton h-8 w-full"></div>
+              </div>
+            ) : error ? (
+              <div className="text-red-500">Error: {error}</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="table table-zebra">
+                  <thead>
+                    <tr>
+                      <th>No.</th>
+                      <th>X</th>
+                      <th>fx</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody>
+                    {interpolation.map((item, index) => (
+                      <tr key={index}>
+                        <td>{index + 1}</td>
+                        <td>{`[${item.matX.map((val) => `${val}`)}]`}</td>
+                        <td>{`[${item.matFX.map((val) => `${val}`)}]`}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
