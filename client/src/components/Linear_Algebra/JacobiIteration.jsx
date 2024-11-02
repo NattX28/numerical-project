@@ -188,7 +188,7 @@ function JacobiIteration() {
                   placeholder="0.000001"
                   name="tolerance"
                   value={formData.tolerance}
-                  onChange={(e) => handleTolerance(e)}
+                  onChange={handleInputChange}
                   className="input input-bordered w-full max-w-xs"
                 />
               </label>

@@ -16,8 +16,6 @@ const app = express();
 const { start, disconnect } = require("./mongo");
 
 start();
-//swagger
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use(
   cors({
@@ -27,6 +25,10 @@ app.use(
     // credentials: true,
   })
 );
+
+//swagger
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 // app.use(helmet());
 app.use(express.json()); // เพื่ออ่านไฟล์ json / body ที่เป็น json
 
