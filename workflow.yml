@@ -25,5 +25,5 @@ uses : docker/build-push-action@v3
 with:
   file: ./Dockerfile
   push: true
-  tags: NattX28/./
+  tags: NattX28/numerical-cilent:latest
 
