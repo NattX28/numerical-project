@@ -28,6 +28,7 @@ function SimpleRegression() {
       return { ...prev, points: newPoints };
     });
   }, []);
+  console.log("hello");
 
   const handleNumberOfPointsChange = useCallback((e) => {
     const value = e.target.value;
