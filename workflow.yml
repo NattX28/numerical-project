@@ -1,0 +1,29 @@
+name: numerical-project
+run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+on: [push]
+jobs:
+  runs-on: ubuntu-lastest
+
+  steps:
+  -name : check our repo
+  uses: action/checkout@v2
+
+  -name: install dependency
+  run : npm install
+
+  -name: login to dockerhub
+  uses : docker/login-action@v2
+  with:
+    username: ${{ secret.DOCKER_HUB_USERNAME }}
+    password: ${{ secret.DOCKER_HUB_ACCESS_TOKEN }}
+
+  -name: setup docker buildx
+  uses : docker/setup-buildx-action@v1
+
+-name : build and push front and back
+uses : docker/build-push-action@v3
+with:
+  file: ./Dockerfile
+  push: true
+  tags: NattX28/./
+
